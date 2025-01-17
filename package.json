@@ -1,8 +1,10 @@
 {
   "name": "permask",
   "version": "1.0.0",
+  "type": "module",
   "description": "A lightweight utility library for managing permission bitmasks with groups and access levels",
-  "main": "dist/index.js",
+  "main": "dist/permask.cjs",
+  "module": "dist/permask.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "vite build",
@@ -53,7 +55,7 @@
   "homepage": "https://github.com/dschewchenko/permask#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dschewchenko/big.esm.git"
+    "url": "https://github.com/dschewchenko/permask.git"
   },
   "release": {
     "plugins": [
