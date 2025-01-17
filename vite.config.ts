@@ -7,7 +7,8 @@ export default defineConfig({
   build: {
     lib: {
       entry: "./src/index.ts",
-      name: "Permask"
+      name: "Permask",
+      formats: ["cjs", "es", "umd"]
     },
     rollupOptions: {
       external: []
@@ -17,7 +18,7 @@ export default defineConfig({
   },
   plugins: [
     dts({
-      insertTypesEntry: true // Генерація типів
+      insertTypesEntry: true
     })
   ],
   test: {

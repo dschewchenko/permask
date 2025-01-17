@@ -161,6 +161,8 @@ You can use `permask` just with bitmask utility functions.
     } as const;
   ```
 
+## [Integration with frameworks](https://github.com/dschewchenko/permask/blob/main/integrations/README.md)
+
 ## How I'm using it?
 
 I'm using `permask` in my projects to manage permissions for users. It's easy to use and understand. And that's why I decided to share it with you.
@@ -183,7 +185,7 @@ If you have any questions or suggestions, feel free to open an issue or pull req
 - [x] Add tests
 - [x] Add documentation
 - [ ] Add easy-to-use integration with frameworks
-  - [ ] Express
+  - [x] Express
   - [ ] Fastify
   - [ ] NestJS
   - [ ] Hono
