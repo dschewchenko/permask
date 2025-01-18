@@ -51,31 +51,31 @@ yarn add permask
 
 ### 1. Define groups of permissions:
 
-    ```ts
-    // examples
-    // with object
-    const PermissionGroup = {
-        POST: 0,
-        COMMENT: 1,
-        LIKE: 2
-    } as const;
+```ts
+// examples
+// with object
+const PermissionGroup = {
+  POST: 0,
+  COMMENT: 1,
+  LIKE: 2
+} as const;
 
-    // with enum
-    enum PermissionGroup {
-        POST,
-        COMMENT,
-        LIKE
-    }
-    ```
+// with enum
+enum PermissionGroup {
+  POST,
+  COMMENT,
+  LIKE
+}
+```
 
 ### 2. Initialize permask
 
-    ```ts
-    import { createPermask } from "permask";
-    import { PermissionGroup } from "./permission-group"; // your defined groups
+```ts
+import { createPermask } from "permask";
+import { PermissionGroup } from "./permission-group"; // your defined groups
 
-    const permask = createPermask(PermissionGroup);
-    ```
+const permask = createPermask(PermissionGroup);
+```
 
 ### 3. Use it
 
@@ -146,19 +146,19 @@ You can use `permask` just with bitmask utility functions.
 **Constants:**
 - `PermissionAccess` - an enum-like object with access types.
   ```ts
-    const PermissionAccess = {
-        READ: 1,  // 0b001
-        WRITE: 2, // 0b010
-        DELETE: 4 // 0b100
-    } as const;
+  const PermissionAccess = {
+      READ: 1,  // 0b001
+      WRITE: 2, // 0b010
+      DELETE: 4 // 0b100
+  } as const;
   ```
 - `PermissionAccessBitmasks` - full access bitmask for usual cases.
   ```ts
-    const PermissionAccessBitmasks = {
-        FULL: 0b111,  // read, write, delete
-        WRITE: 0b011, // read, write
-        READ: 0b001   // read-only
-    } as const;
+  const PermissionAccessBitmasks = {
+      FULL: 0b111,  // read, write, delete
+      WRITE: 0b011, // read, write
+      READ: 0b001   // read-only
+  } as const;
   ```
 
 ## [Integration with frameworks](https://github.com/dschewchenko/permask/blob/main/integrations/README.md)
