@@ -186,6 +186,8 @@ If you have any questions or suggestions, feel free to open an issue or pull req
 - [x] Add documentation
 - [ ] Add easy-to-use integration with frameworks
   - [x] Express
+  - [ ] H3
+  - [ ] NitroJS
   - [ ] Fastify
   - [ ] NestJS
   - [ ] Hono
