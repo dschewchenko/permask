@@ -231,14 +231,14 @@ export class PermissionCheck<T extends Record<string, number>> {
   /**
    * Check if has specific permission
    */
-  can(permission: keyof T): boolean {
+  can<K extends keyof T | 'ALL'>(permission: K): boolean {
     // Special handling for the ALL permission
-    if (permission === 'ALL' as keyof T) {
+    if (permission === 'ALL') {
       // For ALL permission, we need to check if all bits are set
       return this.canEverything();
     }
     
-    const permValue = this.permask.getPermissionValue(permission);
+    const permValue = this.permask.getPermissionValue(permission as keyof T);
     return permValue ? (this.access & permValue) !== 0 : false;
   }
   
@@ -408,7 +408,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Get a permission value by key
    */
-  getPermissionValue(permission: keyof T | 'ALL'): number {
+  getPermissionValue<K extends keyof T | 'ALL'>(permission: K): number {
     return (this.permissions as any)[permission] || 0;
   }
   
