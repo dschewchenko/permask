@@ -1,11 +1,5 @@
 import { ACCESS_BITS, ACCESS_MASK } from "./constants/bitmask";
 import { PermissionAccess } from "./constants/permission";
-import {
-  canDelete,
-  canRead,
-  canWrite,
-  hasPermissionAccess
-} from "./utils/bitmask";
 
 /**
  * Flexible permission management system that allows custom permission definitions,
@@ -206,14 +200,17 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    * Compatibility methods with the standard utils
    */
   canRead(bitmask: number): boolean {
-    return hasPermissionAccess(bitmask, PermissionAccess.READ);
+    const access = bitmask & this.accessMask;
+    return (access & PermissionAccess.READ) !== 0;
   }
   
   canWrite(bitmask: number): boolean {
-    return hasPermissionAccess(bitmask, PermissionAccess.WRITE);
+    const access = bitmask & this.accessMask;
+    return (access & PermissionAccess.WRITE) !== 0;
   }
   
   canDelete(bitmask: number): boolean {
-    return hasPermissionAccess(bitmask, PermissionAccess.DELETE);
+    const access = bitmask & this.accessMask;
+    return (access & PermissionAccess.DELETE) !== 0;
   }
 }
