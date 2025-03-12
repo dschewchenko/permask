@@ -31,7 +31,7 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
   private permissionSets: Record<string, Array<keyof T>> = {};
   
   constructor(options: {
-    permissions?: T;
+    permissions?: T | Record<string, number | null | undefined>;
     accessBits?: number;
     accessMask?: number;
     groups?: Record<string, number>;
@@ -46,23 +46,56 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
       this.accessMask = ACCESS_MASK;
     }
     
-    const basePermissions = (options.permissions || DefaultPermissionAccess as unknown as T);
+    // Initialize with default or provided permissions
+    const basePermissions = options.permissions || DefaultPermissionAccess as unknown as T;
     
-    // Hesaplanan tüm izinlerin ORed değeri (ALL olmadan)
-    let allPermissionsValue = 0;
-    for (const key in basePermissions) {
+    // Automatically assign permission values for those without explicit values
+    const processedPermissions: Record<string, number> = {};
+    let nextValue = 1; // Start with 1 (0b1)
+    
+    // First pass: process explicitly defined numeric values
+    for (const [key, value] of Object.entries(basePermissions)) {
       if (key !== 'ALL') {
-        allPermissionsValue |= basePermissions[key];
+        if (typeof value === 'number') {
+          processedPermissions[key] = value;
+          // Make sure we don't use this bit for auto-assigned permissions
+          while ((nextValue & value) !== 0 && nextValue <= this.accessMask) {
+            nextValue = nextValue << 1;
+          }
+        }
       }
     }
     
-    // ALL iznini otomatik olarak ekle veya kullanıcının tanımladığı değeri koru
-    const permissions = { 
-      ...basePermissions,
-      ALL: ('ALL' in basePermissions) ? basePermissions.ALL : this.accessMask
-    } as T & { ALL: number };
+    // Second pass: auto-assign values for permissions without explicit values
+    for (const [key, value] of Object.entries(basePermissions)) {
+      if (key !== 'ALL') {
+        if (value === null || value === undefined || typeof value !== 'number') {
+          // Auto-assign a permission value
+          if (nextValue <= this.accessMask) {
+            processedPermissions[key] = nextValue;
+            nextValue = nextValue << 1;
+          } else {
+            throw new Error(`Not enough bits available to auto-assign permission '${key}'. Increase accessBits.`);
+          }
+        }
+      }
+    }
     
-    this.permissions = permissions;
+    // Calculate the combined value of all permissions
+    let allPermissionsValue = 0;
+    for (const value of Object.values(processedPermissions)) {
+      allPermissionsValue |= value;
+    }
+    
+    // Handle the ALL permission
+    if ('ALL' in basePermissions && typeof basePermissions.ALL === 'number') {
+      processedPermissions.ALL = basePermissions.ALL;
+    } else {
+      // If ALL isn't defined, use the calculated mask or accessMask
+      processedPermissions.ALL = allPermissionsValue || this.accessMask;
+    }
+    
+    this.permissions = processedPermissions as T & { ALL: number };
     this.groups = options.groups || {};
     
     // Validate permissions fit within specified bits
