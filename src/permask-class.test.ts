@@ -3,7 +3,11 @@ import { Permask } from '../src/permask-class';
 
 describe('Permask', () => {
   // Default permissions instance for basic tests
-  let defaultPermask: Permask;
+  let defaultPermask: Permask<{
+    READ: number;
+    WRITE: number;
+    DELETE: number;
+  }>;
   
   // Custom permissions for advanced tests
   let customPermask: Permask<{
@@ -12,7 +16,7 @@ describe('Permask', () => {
     DELETE: number;
     SHARE: number;
     PRINT: number;
-    [key: string]: number;
+    ARCHIVE?: number;
   }>;
   
   beforeEach(() => {
@@ -26,8 +30,8 @@ describe('Permask', () => {
         EDIT: 2,      // 0b00010
         DELETE: 4,    // 0b00100
         SHARE: 8,     // 0b01000
-        PRINT: 16     // 0b10000
-      },
+        PRINT: 16,    // 0b10000
+      } as const,
       accessBits: 6,  // Changed from 5 to 6 to accommodate values up to 63
       groups: {
         DOCUMENTS: 1,

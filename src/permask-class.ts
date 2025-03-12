@@ -69,7 +69,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Check if a bitmask has a specific permission
    */
-  hasPermission(bitmask: number, permission: keyof T | string): boolean {
+  hasPermission(bitmask: number, permission: keyof T): boolean {
     const access = bitmask & this.accessMask;
     const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
     return (access & permValue) !== 0;
@@ -102,7 +102,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Add permission to existing bitmask without changing the group
    */
-  addPermission(bitmask: number, permission: keyof T | string): number {
+  addPermission(bitmask: number, permission: keyof T): number {
     const group = this.getGroup(bitmask);
     const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
     const access = (bitmask & this.accessMask) | permValue;
@@ -112,7 +112,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Remove permission from existing bitmask
    */
-  removePermission(bitmask: number, permission: keyof T | string): number {
+  removePermission(bitmask: number, permission: keyof T): number {
     const group = this.getGroup(bitmask);
     const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
     const access = (bitmask & this.accessMask) & ~permValue;
@@ -173,7 +173,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     read?: boolean;
     write?: boolean;
     delete?: boolean;
-    customPermissions?: (keyof T | string)[];
+    customPermissions?: (keyof T)[];
   }): number {
     const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
     
