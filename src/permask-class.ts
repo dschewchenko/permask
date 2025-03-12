@@ -280,14 +280,22 @@ export class PermissionCheck<T extends Record<string, number>> {
 }
 
 /**
+ * Type definition for the result of parseSimple
+ */
+export type PermissionSimple<T extends Record<string, number>> = {
+  group: number;
+  groupName?: string;
+} & {
+  [K in string & keyof T as Lowercase<K>]: boolean;
+};
+
+/**
  * Flexible permission management system with fluent API
  */
 export class Permask<T extends Record<string, number> = Record<string, number>> {
   // Common permission presets
   readonly FULL_ACCESS: number;
   readonly NO_ACCESS: number;
-  readonly READ_ONLY: number;
-  readonly READ_WRITE: number;
   
   // Make accessMask accessible to context classes
   readonly accessMask: number;
@@ -313,8 +321,6 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     // Initialize presets
     this.FULL_ACCESS = this.accessMask;
     this.NO_ACCESS = 0;
-    this.READ_ONLY = DefaultPermissionAccess.READ;
-    this.READ_WRITE = DefaultPermissionAccess.READ | DefaultPermissionAccess.WRITE;
   }
   
   /**
@@ -407,10 +413,10 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    * // Returns { group: 2, read: true, write: true, delete: false }
    * const simple = permask.parseSimple(42);
    */
-  parseSimple(bitmask: number): Record<string, any> {
+  parseSimple(bitmask: number): PermissionSimple<T> {
     const group = bitmask >> this.accessBits;
     const access = bitmask & this.accessMask;
-    const result: Record<string, any> = { group };
+    const result = { group } as PermissionSimple<T>;
     
     // Add group name if available
     const groupName = this.getGroupName(bitmask);
@@ -435,10 +441,10 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
       // If it represents all other permissions combined, only include it if specifically requested
       if (key === 'FULL' && permValue === combinedPermissionsMask) {
         // Only include FULL if it was specifically granted (compare with exact mask)
-        result[permKey] = access === permValue;
+        (result as any)[permKey] = access === permValue;
       } else {
         // For normal permissions, just check if the bit is set
-        result[permKey] = (access & permValue) !== 0;
+        (result as any)[permKey] = (access & permValue) !== 0;
       }
     }
     
