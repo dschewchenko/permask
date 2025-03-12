@@ -450,7 +450,13 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     const groupName = parsed.groupName || parsed.group.toString();
     
     const permissionNames = Object.entries(parsed.permissions)
-      .filter(([, enabled]) => enabled)
+      .filter(([name, enabled]) => {
+        // Filter out FULL to avoid confusion with individual permissions
+        if (name === 'FULL') {
+          return false;
+        }
+        return enabled;
+      })
       .map(([name]) => name);
     
     if (permissionNames.length === 0) {

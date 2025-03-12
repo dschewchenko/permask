@@ -73,11 +73,11 @@ describe('Permask', () => {
       const readPermission = basicPermask.for('USERS').grant(['READ']).value();
       const readWritePermission = basicPermask.for('USERS').grant(['READ', 'WRITE']).value();
       
-      // Group 1 (USERS) << 3 bits = 8, plus READ (1) = 9
-      expect(readPermission).toBe(9);
+      // Group 1 (USERS) << 5 bits = 32, plus READ (2) = 34
+      expect(readPermission).toBe(34);
       
-      // Group 1 (USERS) << 3 bits = 8, plus READ (1) + WRITE (2) = 11
-      expect(readWritePermission).toBe(11);
+      // Group 1 (USERS) << 5 bits = 32, plus READ (2) + WRITE (8) = 42
+      expect(readWritePermission).toBe(42);
     });
     
     it('should create permissions with explicit group IDs', () => {
@@ -90,7 +90,7 @@ describe('Permask', () => {
     });
     
     it('should handle ALL_PERMISSIONS symbol', () => {
-      const allPermissions = richPermask.for('DOCUMENTS').grant([ALL_PERMISSIONS]).value();
+      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
       const alternateWay = richPermask.for('DOCUMENTS').grantAll().value();
       
       // All permissions should set all bits (63 for 6 bits)
@@ -135,6 +135,17 @@ describe('Permask', () => {
       // All permissions should set all bits
       expect(richPermask.check(allPermissions).canEverything()).toBe(true);
       expect(allPermissions).toBe(richPermask.check(allPermissions).group() << 6 | 63);
+    });
+
+    it('should handle granting all permissions via grantAll()', () => {
+      // Changed from using ALL_PERMISSIONS to directly using grantAll()
+      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
+      const alternateWay = richPermask.for('DOCUMENTS').grantAll().value();
+      
+      // All permissions should set all bits (63 for 6 bits)
+      expect(richPermask.check(allPermissions).canEverything()).toBe(true);
+      expect(allPermissions).toBe(richPermask.check(allPermissions).group() << 6 | 63);
+      expect(allPermissions).toEqual(alternateWay);
     });
   });
   
@@ -393,6 +404,18 @@ describe('New Permask API', () => {
     
     it('should handle ALL_PERMISSIONS', () => {
       // Grant all permissions
+      const allPerm = permask.for('VIDEOS').grantAll().value();
+      
+      expect(permask.check(allPerm).canEverything()).toBe(true);
+      expect(permask.check(allPerm).can('VIEW')).toBe(true);
+      expect(permask.check(allPerm).can('EDIT')).toBe(true);
+      expect(permask.check(allPerm).can('DELETE')).toBe(true);
+      expect(permask.check(allPerm).can('SHARE')).toBe(true);
+      expect(permask.check(allPerm).can('PRINT')).toBe(true);
+    });
+
+    it('should handle granting all permissions', () => {
+      // Changed from ALL_PERMISSIONS to grantAll()
       const allPerm = permask.for('VIDEOS').grantAll().value();
       
       expect(permask.check(allPerm).canEverything()).toBe(true);
