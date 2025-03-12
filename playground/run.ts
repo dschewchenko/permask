@@ -1,33 +1,54 @@
-import { Permask } from 'permask';
+import { DefaultPermissionAccess, PermaskBuilder } from 'permask';
 
-// Example 1: Using default permissions (READ, WRITE, DELETE)
-const defaultPermissions = new Permask();
+console.log('=== Permask API Usage Examples ===\n');
 
-// Create a permission bitmask for group 1 with read and write access
-const userPermission = defaultPermissions.createStandardBitmask({
-  group: 1,
-  read: true,
-  write: true
-});
+// Example 1: Using default CRUD permissions
+console.log('== Example 1: Default CRUD Permissions ==');
 
-console.log('User Permission:', defaultPermissions.parse(userPermission));
-console.log('Can Read:', defaultPermissions.canRead(userPermission)); // true
-console.log('Can Write:', defaultPermissions.canWrite(userPermission)); // true
-console.log('Can Delete:', defaultPermissions.canDelete(userPermission)); // false
+const crudPermask = new PermaskBuilder({
+  permissions: DefaultPermissionAccess,
+  groups: {
+    USERS: 1,
+    DOCUMENTS: 2,
+    PHOTOS: 3
+  }
+}).build();
+
+// Create a permission for documents with read and write access
+const documentPermission = crudPermask.for('DOCUMENTS')
+  .grant(['READ', 'WRITE'])
+  .value();
+
+console.log('Document Permission Details:', crudPermask.check(documentPermission).explain());
+console.log('Can Read:', crudPermask.check(documentPermission).canRead()); // true
+console.log('Can Write:', crudPermask.check(documentPermission).canWrite()); // true
+console.log('Can Delete:', crudPermask.check(documentPermission).canDelete()); // false
+console.log('String Representation:', crudPermask.toString(documentPermission)); // "DOCUMENTS:READ,WRITE"
+
+// Parse from string
+const parsedPermission = crudPermask.fromString('PHOTOS:CREATE,READ,UPDATE');
+console.log('Parsed Permission Details:', crudPermask.check(parsedPermission).explain());
+
+console.log('\n== Example 2: Custom Permissions ==');
 
 // Example 2: Custom permissions with named groups
-const customPermissions = new Permask({
+const customPermask = new PermaskBuilder<{
+  VIEW: number;
+  EDIT: number;
+  DELETE: number;
+  SHARE: number;
+  PRINT: number;
+  DOWNLOAD: number;
+}>({
   permissions: {
-    VIEW: 1,        // 0b001
-    EDIT: 2,        // 0b010
-    DELETE: 4,      // 0b100
-    SHARE: 8,       // 0b1000
-    PRINT: 16,      // 0b10000
+    VIEW: 1,        // 0b000001
+    EDIT: 2,        // 0b000010
+    DELETE: 4,      // 0b000100
+    SHARE: 8,       // 0b001000
+    PRINT: 16,      // 0b010000
     DOWNLOAD: 32,   // 0b100000
-    ADMIN: 64,       // 0b1000000
-    ENCRYPT: 128    // 0b10000000
   },
-  accessBits: 8,    // We need 7 bits for our permissions
+  accessBits: 8,
   groups: {
     DOCUMENTS: 1,
     PHOTOS: 2,
@@ -35,53 +56,112 @@ const customPermissions = new Permask({
     FILES: 4,
     ADMIN: 100
   }
-});
+})
+.definePermissionSet('VIEWER', ['VIEW', 'DOWNLOAD'])
+.definePermissionSet('EDITOR', ['VIEW', 'EDIT', 'DOWNLOAD'])
+.definePermissionSet('MANAGER', ['VIEW', 'EDIT', 'DELETE', 'SHARE'])
+.definePermissionSet('ADMIN', ['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT', 'DOWNLOAD'])
+.build();
 
-// Create permissions for a document editor
-const editorPermission = customPermissions.create('DOCUMENTS', ['VIEW', 'EDIT', 'SHARE']);
-console.log('Editor Permission:', customPermissions.parse(editorPermission));
+// Create permission using specific permissions
+const editorPermission = customPermask.for('DOCUMENTS')
+  .grant(['VIEW', 'EDIT', 'SHARE'])
+  .value();
+
+console.log('Editor Permission Details:', customPermask.check(editorPermission).explain());
 
 // Check specific permissions
-console.log('Can View:', customPermissions.hasPermission(editorPermission, 'VIEW')); // true
-console.log('Can Delete:', customPermissions.hasPermission(editorPermission, 'DELETE')); // false
+console.log('Can View:', customPermask.check(editorPermission).can('VIEW')); // true
+console.log('Can Delete:', customPermask.check(editorPermission).can('DELETE')); // false
+console.log('Can View and Edit:', customPermask.check(editorPermission).canAll(['VIEW', 'EDIT'])); // true
+console.log('Can Delete or Print:', customPermask.check(editorPermission).canAny(['DELETE', 'PRINT'])); // false
 
-// Add a permission
-const enhancedPermission = customPermissions.addPermission(editorPermission, 'PRINT');
-console.log('Enhanced Permission:', customPermissions.parse(enhancedPermission));
+// Create permission using a permission set
+const managerPermission = customPermask.for('PHOTOS')
+  .grantSet('MANAGER')
+  .value();
 
-// Remove a permission
-const reducedPermission = customPermissions.removePermission(enhancedPermission, 'SHARE');
-console.log('Reduced Permission:', customPermissions.parse(reducedPermission));
+console.log('\nManager Permission Details:', customPermask.check(managerPermission).explain());
 
-// Check group
-console.log('Is Document Group:', customPermissions.hasGroup(editorPermission, 'DOCUMENTS')); // true
-console.log('Is Photo Group:', customPermissions.hasGroup(editorPermission, 'PHOTOS')); // false
-console.log('Group Name:', customPermissions.getGroupName(editorPermission)); // "DOCUMENTS"
+// Grant all permissions
+const adminPermission = customPermask.for('ADMIN')
+  .grantAll()
+  .value();
 
-// Register a new permission at runtime
-customPermissions.registerPermission('ENCRYPT', 128);
-const securePermission = customPermissions.addPermission(editorPermission, 'ENCRYPT');
-console.log('Secure Permission:', customPermissions.parse(securePermission));
+console.log('\nAdmin Permission Details:', customPermask.check(adminPermission).explain());
+console.log('Has all permissions:', customPermask.check(adminPermission).canEverything()); // true
+console.log('String Representation:', customPermask.toString(adminPermission)); // "ADMIN:ALL"
 
-// Register a new group at runtime
-customPermissions.registerGroup('SECURE_DOCS', 101);
-const secureDocPermission = customPermissions.create('SECURE_DOCS', ['VIEW', 'EDIT', 'ENCRYPT']);
-console.log('Secure Doc Permission:', customPermissions.parse(secureDocPermission));
+console.log('\n== Example 3: Permission Sets and Extensions ==');
 
-// Example 3: Using the Permask class with different bits configuration
-const tinyPermissions = new Permask({
+// Extend the permissions system
+const extendedPermask = customPermask.toBuilder()
+  .definePermission('APPROVE', 64)
+  .defineGroup('REPORTS', 101)
+  .definePermissionSet('APPROVER', ['VIEW', 'APPROVE'])
+  .build();
+
+// Create permission using new components
+const reportPermission = extendedPermask.for('REPORTS')
+  .grantSet('APPROVER')
+  .value();
+
+console.log('Report Permission Details:', extendedPermask.check(reportPermission).explain());
+
+// Combine permission sets with individual permissions
+const customPermission = extendedPermask.for('DOCUMENTS')
+  .grantSet('EDITOR')
+  .grant(['APPROVE'])
+  .value();
+
+console.log('\nCustom Permission Details:', extendedPermask.check(customPermission).explain());
+
+console.log('\n== Example 4: String Conversion ==');
+
+// Convert to string and back
+const permissionString = extendedPermask.toString(customPermission);
+console.log('Permission String:', permissionString);
+
+const reconvertedPermission = extendedPermask.fromString(permissionString);
+console.log('Reconverted Permission Details:', extendedPermask.check(reconvertedPermission).explain());
+
+// Special string formats
+console.log('\nSpecial String Formats:');
+console.log('From "DOCUMENTS:ALL":', extendedPermask.check(extendedPermask.fromString('DOCUMENTS:ALL')).explain());
+console.log('From "VIDEOS:*":', extendedPermask.check(extendedPermask.fromString('VIDEOS:*')).explain());
+console.log('From "PHOTOS:VIEWER":', extendedPermask.check(extendedPermask.fromString('PHOTOS:VIEWER')).explain());
+
+console.log('\n== Example 5: Auto-assigned Permission Values ==');
+
+// Auto-assign permission values
+const autoPermask = new PermaskBuilder<{
+  READ: number;
+  WRITE: number;
+  EXECUTE: number;
+  CONFIGURE: number;
+}>({
   permissions: {
-    READ_ONLY: 1,  // 0b01
-    FULL: 3        // 0b11
+    READ: null,      // Will be auto-assigned to 1
+    WRITE: null,     // Will be auto-assigned to 2
+    EXECUTE: null,   // Will be auto-assigned to 4
+    CONFIGURE: null, // Will be auto-assigned to 8
   },
-  accessBits: 2,   // Only using 2 bits for permissions
   groups: {
-    PUBLIC: 1,
-    PRIVATE: 2
+    FILES: 1,
+    PROGRAMS: 2,
+    SETTINGS: 3
   }
-});
+}).build();
 
-const publicReadOnly = tinyPermissions.create('PUBLIC', ['READ_ONLY']);
-console.log('Public Read Only:', tinyPermissions.parse(publicReadOnly));
-console.log('Group:', tinyPermissions.getGroup(publicReadOnly));
+const filePermission = autoPermask.for('FILES')
+  .grant(['READ', 'WRITE'])
+  .value();
+
+console.log('Auto-assigned Permission Details:', autoPermask.check(filePermission).explain());
+console.log('Permission Values:');
+console.log('- READ:', autoPermask.getPermissionValue('READ'));
+console.log('- WRITE:', autoPermask.getPermissionValue('WRITE'));
+console.log('- EXECUTE:', autoPermask.getPermissionValue('EXECUTE'));
+console.log('- CONFIGURE:', autoPermask.getPermissionValue('CONFIGURE'));
+console.log('- ALL:', autoPermask.getPermissionValue('ALL'));
 
