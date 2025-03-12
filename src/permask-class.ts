@@ -49,6 +49,20 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
     // Initialize with default or provided permissions
     const basePermissions = options.permissions || DefaultPermissionAccess as unknown as T;
     
+    // First check to see if any permission values exceed the current access bit limit
+    let maxPermValue = 0;
+    for (const [key, value] of Object.entries(basePermissions)) {
+      if (typeof value === 'number' && value > maxPermValue) {
+        maxPermValue = value;
+      }
+    }
+
+    // Calculate minimum required bits for the maximum permission value
+    if (maxPermValue > this.accessMask) {
+      const minimumBits = Math.ceil(Math.log2(maxPermValue + 1));
+      throw new Error(`Permission value ${maxPermValue} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits. Please use at least ${minimumBits} access bits.`);
+    }
+    
     // Automatically assign permission values for those without explicit values
     const processedPermissions: Record<string, number> = {};
     let nextValue = 1; // Start with 1 (0b1)
@@ -110,8 +124,10 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
    * Define a new permission
    */
   definePermission(name: string, value: number): PermaskBuilder<T & Record<string, number>> {
+    // Calculate minimum required bits for this permission value
     if (value > this.accessMask) {
-      throw new Error(`Permission value ${value} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits`);
+      const minimumBits = Math.ceil(Math.log2(value + 1));
+      throw new Error(`Permission value ${value} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits. Please use at least ${minimumBits} access bits.`);
     }
     
     (this.permissions as Record<string, number>)[name] = value;

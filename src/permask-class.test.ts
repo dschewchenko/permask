@@ -778,7 +778,7 @@ describe('Auto Permission Value Assignment', () => {
         DELETE: 16,
         // ALL is not specified, should be calculated as 1+4+16 = 21
       },
-      accessBits: 5,
+      accessBits: 5, // Changed from 4 to 5 bits to accommodate value 16
     }).build();
     
     expect(permask.getPermissionValue('ALL')).toBe(21);
