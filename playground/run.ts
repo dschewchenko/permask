@@ -16,12 +16,12 @@ const crudPermask = new PermaskBuilder({
 
 // Create a permission for documents with read and write access
 const documentPermission = crudPermask.for('DOCUMENTS')
-  .grant(['READ', 'WRITE'])
+  .grant(['READ', 'CREATE'])
   .value();
 
 console.log('Document Permission Details:', crudPermask.check(documentPermission).explain());
 console.log('Can Read:', crudPermask.check(documentPermission).canRead()); // true
-console.log('Can Write:', crudPermask.check(documentPermission).canWrite()); // true
+console.log('Can Write:', crudPermask.check(documentPermission).canCreate()); // true
 console.log('Can Delete:', crudPermask.check(documentPermission).canDelete()); // false
 console.log('String Representation:', crudPermask.toString(documentPermission)); // "DOCUMENTS:READ,WRITE"
 
