@@ -191,7 +191,8 @@ describe('Permask', () => {
           EDIT: false,
           DELETE: false,
           SHARE: true,
-          PRINT: false
+          PRINT: false,
+          ALL: false,
         }
       });
     });
@@ -461,7 +462,8 @@ describe('New Permask API', () => {
           EDIT: true,
           DELETE: false,
           SHARE: false,
-          PRINT: false
+          PRINT: false,
+          ALL: false,
         }
       });
     });
@@ -564,142 +566,120 @@ describe('CRUD Permission Tests', () => {
   });
 });
 
-// Add test suite for the parseSimple method
-describe('ParseSimple Method Tests', () => {
-  let permask: Permask<{
+// Add new test cases for ALL permission
+describe('ALL Permission Tests', () => {
+  let allPermask: Permask<{
     VIEW: number;
     EDIT: number;
     DELETE: number;
     SHARE: number;
     PRINT: number;
-    FULL: number;
+    ALL: number;
   }>;
   
   beforeEach(() => {
-    permask = new PermaskBuilder<{
+    allPermask = new PermaskBuilder<{
       VIEW: number;
       EDIT: number;
       DELETE: number;
       SHARE: number;
       PRINT: number;
-      FULL: number;
+      ALL: number;
     }>({
       permissions: {
-        VIEW: 1,
-        EDIT: 2,
-        DELETE: 4,
-        SHARE: 8,
-        PRINT: 16,
-        FULL: 31
+        VIEW: 1,    // 0b00001
+        EDIT: 2,    // 0b00010
+        DELETE: 4,  // 0b00100
+        SHARE: 8,   // 0b01000
+        PRINT: 16,  // 0b10000
+        ALL: 31     // 0b11111 - All permissions combined
       },
       accessBits: 6,
       groups: {
         DOCUMENTS: 1,
-        PHOTOS: 2,
-        VIDEOS: 3
+        PHOTOS: 2
       }
     }).build();
   });
-
-  it('should return a flattened representation of permissions', () => {
-    // Create permissions with different settings
-    const basicPerm = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
-    const allPerm = permask.for('PHOTOS').grantAll().value();
-    const noPerm = permask.for('VIDEOS').grant([]).value();
+  
+  it('should handle the ALL permission correctly', () => {
+    // Grant individual permissions
+    const partialPerm = allPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
     
-    // Test basic permission
-    const basicResult = permask.parseSimple(basicPerm);
-    expect(basicResult).toEqual({
+    // Grant all permissions
+    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    
+    // Grant using the ALL permission directly
+    const allPerm = allPermask.for('PHOTOS').grant(['ALL']).value();
+    
+    // Test partial permissions
+    expect(allPermask.check(partialPerm).can('VIEW')).toBe(true);
+    expect(allPermask.check(partialPerm).can('EDIT')).toBe(true);
+    expect(allPermask.check(partialPerm).can('DELETE')).toBe(false);
+    expect(allPermask.check(partialPerm).can('ALL')).toBe(false);
+    expect(allPermask.check(partialPerm).canEverything()).toBe(false);
+    
+    // Test full permissions via grantAll
+    expect(allPermask.check(fullPerm).can('VIEW')).toBe(true);
+    expect(allPermask.check(fullPerm).can('EDIT')).toBe(true);
+    expect(allPermask.check(fullPerm).can('DELETE')).toBe(true);
+    expect(allPermask.check(fullPerm).can('SHARE')).toBe(true);
+    expect(allPermask.check(fullPerm).can('PRINT')).toBe(true);
+    expect(allPermask.check(fullPerm).can('ALL')).toBe(true);
+    expect(allPermask.check(fullPerm).canEverything()).toBe(true);
+    
+    // Test granting ALL permission directly
+    expect(allPermask.check(allPerm).can('VIEW')).toBe(true);
+    expect(allPermask.check(allPerm).can('EDIT')).toBe(true);
+    expect(allPermask.check(allPerm).can('DELETE')).toBe(true);
+    expect(allPermask.check(allPerm).can('SHARE')).toBe(true);
+    expect(allPermask.check(allPerm).can('PRINT')).toBe(true);
+    expect(allPermask.check(allPerm).can('ALL')).toBe(true);
+    expect(allPermask.check(allPerm).canEverything()).toBe(true);
+  });
+  
+  it('should include ALL in permission explanation', () => {
+    // Partial permissions
+    const partialPerm = allPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+    const details = allPermask.check(partialPerm).explain();
+    
+    expect(details).toEqual({
       group: 1,
       groupName: 'DOCUMENTS',
-      view: true,
-      edit: true,
-      delete: false,
-      share: false,
-      print: false,
-      full: false
+      permissions: {
+        VIEW: true,
+        EDIT: true,
+        DELETE: false,
+        SHARE: false,
+        PRINT: false,
+        ALL: false
+      }
     });
     
-    // Test full permissions
-    const allResult = permask.parseSimple(allPerm);
-    expect(allResult).toEqual({
-      group: 2,
-      groupName: 'PHOTOS',
-      view: true,
-      edit: true,
-      delete: true,
-      share: true,
-      print: true,
-      full: false
-    });
+    // Full permissions
+    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    const fullDetails = allPermask.check(fullPerm).explain();
     
-    // Test no permissions
-    const noResult = permask.parseSimple(noPerm);
-    expect(noResult).toEqual({
-      group: 3,
-      groupName: 'VIDEOS',
-      view: false,
-      edit: false,
-      delete: false,
-      share: false,
-      print: false,
-      full: false
-    });
-  });
-
-  it('should work with numeric bitmasks directly', () => {
-    // Using raw bitmasks (group 2 << 6 | VIEW+DELETE = 131)
-    const manualBitmask = (2 << 6) | 5; // Group 2 with VIEW(1) and DELETE(4)
-    
-    const result = permask.parseSimple(manualBitmask);
-    expect(result).toEqual({
-      group: 2,
-      groupName: 'PHOTOS',
-      view: true,
-      edit: false,
-      delete: true,
-      share: false,
-      print: false,
-      full: false,
-    });
-  });
-
-  it('should work with unknown groups', () => {
-    // Group 10 doesn't exist in the defined groups
-    const unknownGroupPerm = permask.for(10).grant(['VIEW', 'SHARE']).value();
-    
-    const result = permask.parseSimple(unknownGroupPerm);
-    expect(result).toEqual({
-      group: 10,
-      view: true,
-      edit: false,
-      delete: false,
-      share: true,
-      print: false,
-      full: false,
-    });
-    // Note: no groupName property since the group is unknown
-  });
-
-  it('should work with default permissions', () => {
-    // Create a permask with default CRUD permissions
-    const crudPermask = new PermaskBuilder({
-      permissions: DefaultPermissionAccess,
-      groups: { USERS: 1 }
-    }).build();
-    
-    const perm = crudPermask.for('USERS').grant(['CREATE', 'READ', 'UPDATE']).value();
-    
-    const result = crudPermask.parseSimple(perm);
-    expect(result).toEqual({
+    expect(fullDetails).toEqual({
       group: 1,
-      groupName: 'USERS',
-      create: true,
-      read: true,
-      update: true,
-      write: false,
-      delete: false,
-      full: false
+      groupName: 'DOCUMENTS',
+      permissions: {
+        VIEW: true,
+        EDIT: true,
+        DELETE: true,
+        SHARE: true,
+        PRINT: true,
+        ALL: true
+      }
     });
+  });
+  
+  it('should handle string conversion with ALL', () => {
+    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    expect(allPermask.toString(fullPerm)).toBe('DOCUMENTS:ALL');
+    
+    const fromString = allPermask.fromString('PHOTOS:ALL');
+    expect(allPermask.check(fromString).canEverything()).toBe(true);
+    expect(allPermask.check(fromString).can('ALL')).toBe(true);
   });
 });

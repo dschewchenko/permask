@@ -17,14 +17,14 @@ export const DefaultPermissionAccess = {
   UPDATE: 4,   // 0b00100
   WRITE: 8,    // 0b01000
   DELETE: 16,  // 0b10000
-  FULL: 31     // 0b11111
+  ALL: 31      // 0b11111 - All permissions combined
 } as const;
 
 /**
  * Permission builder for creating and checking permissions
  */
 export class PermaskBuilder<T extends Record<string, number> = Record<string, number>> {
-  private permissions: T;
+  private permissions: T & { ALL: number };
   private accessBits: number;
   private accessMask: number;
   private groups: Record<string, number> = {};
@@ -46,7 +46,23 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
       this.accessMask = ACCESS_MASK;
     }
     
-    this.permissions = (options.permissions || DefaultPermissionAccess as unknown as T);
+    const basePermissions = (options.permissions || DefaultPermissionAccess as unknown as T);
+    
+    // Hesaplanan tüm izinlerin ORed değeri (ALL olmadan)
+    let allPermissionsValue = 0;
+    for (const key in basePermissions) {
+      if (key !== 'ALL') {
+        allPermissionsValue |= basePermissions[key];
+      }
+    }
+    
+    // ALL iznini otomatik olarak ekle veya kullanıcının tanımladığı değeri koru
+    const permissions = { 
+      ...basePermissions,
+      ALL: ('ALL' in basePermissions) ? basePermissions.ALL : this.accessMask
+    } as T & { ALL: number };
+    
+    this.permissions = permissions;
     this.groups = options.groups || {};
     
     // Validate permissions fit within specified bits
@@ -88,8 +104,8 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
   /**
    * Build and return a Permask instance
    */
-  build(): Permask<T> {
-    return new Permask<T>({
+  build(): Permask<T & { ALL: number }> {
+    return new Permask<T & { ALL: number }>({
       permissions: this.permissions,
       accessBits: this.accessBits,
       accessMask: this.accessMask,
@@ -176,6 +192,13 @@ export class PermissionCheck<T extends Record<string, number>> {
    * Check if has specific permission
    */
   can(permission: keyof T): boolean {
+    // Special handling for the ALL permission
+    if (permission === 'ALL' as keyof T) {
+      // For ALL permission, we need to check if all bits are set
+      // Compare against the accessMask directly, not against the ALL value
+      return this.canEverything();
+    }
+    
     const permValue = this.permask.getPermissionValue(permission);
     return permValue ? (this.access & permValue) !== 0 : false;
   }
@@ -209,6 +232,14 @@ export class PermissionCheck<T extends Record<string, number>> {
    */
   canEverything(): boolean {
     return this.access === this.permask.accessMask;
+  }
+
+  /**
+   * Check if has the ALL permission specifically
+   */
+  hasAllPermission(): boolean {
+    const allPermValue = this.permask.getPermissionValue('ALL');
+    return allPermValue ? (this.access & allPermValue) !== 0 : this.canEverything();
   }
   
   /**
@@ -278,16 +309,6 @@ export class PermissionCheck<T extends Record<string, number>> {
     return this.permask.parse(this.bitmask);
   }
 }
-
-/**
- * Type definition for the result of parseSimple
- */
-export type PermissionSimple<T extends Record<string, number>> = {
-  group: number;
-  groupName?: string;
-} & {
-  [K in string & keyof T as Lowercase<K>]: boolean;
-};
 
 /**
  * Flexible permission management system with fluent API
@@ -395,9 +416,22 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     const access = bitmask & this.accessMask;
     const permissions = {} as Partial<Record<keyof T, boolean>>;
     
+    // Calculate the combined mask for all actual permissions (excluding ALL)
+    let combinedPermissionsMask = 0;
     for (const key of Object.keys(this.permissions)) {
-      const permValue = this.permissions[key];
-      permissions[key as keyof T] = (access & permValue) !== 0;
+      if (key !== 'ALL') {
+        combinedPermissionsMask |= this.permissions[key];
+      }
+    }
+    
+    for (const key of Object.keys(this.permissions)) {
+      if (key === 'ALL') {
+        // ALL permission should be true only if all bits in the accessMask are set
+        permissions[key as keyof T] = (access === this.accessMask);
+      } else {
+        const permValue = this.permissions[key];
+        permissions[key as keyof T] = (access & permValue) !== 0;
+      }
     }
     
     return {
@@ -405,50 +439,6 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
       groupName: this.getGroupName(bitmask),
       permissions
     };
-  }
-  
-  /**
-   * Parse a bitmask into a simplified flat object representation
-   * @example
-   * // Returns { group: 2, read: true, write: true, delete: false }
-   * const simple = permask.parseSimple(42);
-   */
-  parseSimple(bitmask: number): PermissionSimple<T> {
-    const group = bitmask >> this.accessBits;
-    const access = bitmask & this.accessMask;
-    const result = { group } as PermissionSimple<T>;
-    
-    // Add group name if available
-    const groupName = this.getGroupName(bitmask);
-    if (groupName) {
-      result.groupName = groupName;
-    }
-    
-    // Calculate the combined mask for all actual permissions (excluding special masks like FULL)
-    let combinedPermissionsMask = 0;
-    for (const key of Object.keys(this.permissions)) {
-      // Skip special permissions that represent combinations
-      if (key === 'FULL') continue;
-      combinedPermissionsMask |= this.permissions[key];
-    }
-    
-    // Add flattened permissions
-    for (const key of Object.keys(this.permissions)) {
-      const permValue = this.permissions[key];
-      const permKey = key.toLowerCase();
-      
-      // Special handling for FULL permission:
-      // If it represents all other permissions combined, only include it if specifically requested
-      if (key === 'FULL' && permValue === combinedPermissionsMask) {
-        // Only include FULL if it was specifically granted (compare with exact mask)
-        (result as any)[permKey] = access === permValue;
-      } else {
-        // For normal permissions, just check if the bit is set
-        (result as any)[permKey] = (access & permValue) !== 0;
-      }
-    }
-    
-    return result;
   }
   
   /**
@@ -499,10 +489,15 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     const parsed = this.parse(bitmask);
     const groupName = parsed.groupName || parsed.group.toString();
     
+    // If all permission bits are set, return ALL
+    if ((bitmask & this.accessMask) === this.accessMask) {
+      return `${groupName}:ALL`;
+    }
+    
     const permissionNames = Object.entries(parsed.permissions)
       .filter(([name, enabled]) => {
-        // Filter out FULL to avoid confusion with individual permissions
-        if (name === 'FULL') {
+        // Filter out ALL to avoid confusion with individual permissions
+        if (name === 'ALL') {
           return false;
         }
         return enabled;
@@ -511,11 +506,6 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     
     if (permissionNames.length === 0) {
       return `${groupName}:NONE`;
-    }
-    
-    // Check if all permissions are enabled
-    if ((bitmask & this.accessMask) === this.accessMask) {
-      return `${groupName}:ALL`;
     }
     
     return `${groupName}:${permissionNames.join(',')}`;
