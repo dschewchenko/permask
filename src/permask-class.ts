@@ -1,26 +1,24 @@
 /**
- * Default number of bits allocated for permissions (3 bits)
+ * Default number of bits allocated for permissions (5 bits)
  */
-const ACCESS_BITS = 3;
+const ACCESS_BITS = 5;
 
 /**
- * Default access mask for 3 bits (0b111 = 7)
+ * Default access mask for 5 bits (0b11111 = 31)
  */
 const ACCESS_MASK = (1 << ACCESS_BITS) - 1;
 
 /**
  * Default permission values
  */
-const PermissionAccess = {
-  READ: 1,   // 0b001
-  WRITE: 2,  // 0b010
-  DELETE: 4  // 0b100
+export const DefaultPermissionAccess = {
+  CREATE: 1,   // 0b00001
+  READ: 2,     // 0b00010
+  UPDATE: 4,   // 0b00100
+  WRITE: 8,    // 0b01000
+  DELETE: 16,  // 0b10000
+  FULL: 31     // 0b11111
 } as const;
-
-/**
- * Special symbol representing all permissions
- */
-export const ALL_PERMISSIONS = Symbol('ALL_PERMISSIONS');
 
 /**
  * Permission builder for creating and checking permissions
@@ -48,7 +46,7 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
       this.accessMask = ACCESS_MASK;
     }
     
-    this.permissions = (options.permissions || PermissionAccess as unknown as T);
+    this.permissions = (options.permissions || DefaultPermissionAccess as unknown as T);
     this.groups = options.groups || {};
     
     // Validate permissions fit within specified bits
@@ -121,15 +119,8 @@ export class PermissionContext<T extends Record<string, number>> {
   /**
    * Grant specific permissions
    */
-  grant(permissions: Array<keyof T | typeof ALL_PERMISSIONS>): this {
-    if (permissions.includes(ALL_PERMISSIONS)) {
-      this.bitmask = (this.bitmask & ~this.permask.accessMask) | this.permask.accessMask;
-      return this;
-    }
-    
+  grant(permissions: Array<keyof T>): this {
     for (const permission of permissions) {
-      if (permission === ALL_PERMISSIONS) continue;
-      
       const permValue = this.permask.getPermissionValue(permission);
       if (permValue) {
         const currentAccess = this.bitmask & this.permask.accessMask;
@@ -156,7 +147,8 @@ export class PermissionContext<T extends Record<string, number>> {
    * Grant full/all permissions
    */
   grantAll(): this {
-    return this.grant([ALL_PERMISSIONS]);
+    this.bitmask = (this.bitmask & ~this.permask.accessMask) | this.permask.accessMask;
+    return this;
   }
   
   /**
@@ -220,24 +212,38 @@ export class PermissionCheck<T extends Record<string, number>> {
   }
   
   /**
+   * Check if has standard CREATE permission
+   */
+  canCreate(): boolean {
+    return (this.access & DefaultPermissionAccess.CREATE) !== 0;
+  }
+  
+  /**
    * Check if has standard READ permission
    */
   canRead(): boolean {
-    return (this.access & PermissionAccess.READ) !== 0;
+    return (this.access & DefaultPermissionAccess.READ) !== 0;
+  }
+  
+  /**
+   * Check if has standard UPDATE permission
+   */
+  canUpdate(): boolean {
+    return (this.access & DefaultPermissionAccess.UPDATE) !== 0;
   }
   
   /**
    * Check if has standard WRITE permission
    */
   canWrite(): boolean {
-    return (this.access & PermissionAccess.WRITE) !== 0;
+    return (this.access & DefaultPermissionAccess.WRITE) !== 0;
   }
   
   /**
    * Check if has standard DELETE permission
    */
   canDelete(): boolean {
-    return (this.access & PermissionAccess.DELETE) !== 0;
+    return (this.access & DefaultPermissionAccess.DELETE) !== 0;
   }
   
   /**
@@ -307,8 +313,8 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     // Initialize presets
     this.FULL_ACCESS = this.accessMask;
     this.NO_ACCESS = 0;
-    this.READ_ONLY = PermissionAccess.READ;
-    this.READ_WRITE = PermissionAccess.READ | PermissionAccess.WRITE;
+    this.READ_ONLY = DefaultPermissionAccess.READ;
+    this.READ_WRITE = DefaultPermissionAccess.READ | DefaultPermissionAccess.WRITE;
   }
   
   /**

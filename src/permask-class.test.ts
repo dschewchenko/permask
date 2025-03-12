@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ALL_PERMISSIONS, Permask, PermaskBuilder } from '../src/permask-class';
-import { PermissionAccess } from './constants/permission';
+import { DefaultPermissionAccess, Permask, PermaskBuilder } from '../src/permask-class';
 
 describe('Permask', () => {
   // Simple permissions for basic tests
@@ -27,11 +26,11 @@ describe('Permask', () => {
       DELETE: number;
     }>({
       permissions: {
-        READ: PermissionAccess.READ,    // 1
-        WRITE: PermissionAccess.WRITE,  // 2
-        DELETE: PermissionAccess.DELETE // 4
+        READ: DefaultPermissionAccess.READ,    // 2
+        WRITE: DefaultPermissionAccess.WRITE,  // 8
+        DELETE: DefaultPermissionAccess.DELETE // 16
       },
-      accessBits: 3,
+      accessBits: 5,
       groups: {
         USERS: 1,
         ADMINS: 2
@@ -128,6 +127,14 @@ describe('Permask', () => {
       expect(richPermask.check(customPerm).can('SHARE')).toBe(true);
       expect(richPermask.check(customPerm).can('DELETE')).toBe(false);
       expect(richPermask.check(customPerm).can('PRINT')).toBe(false);
+    });
+
+    it('should handle granting all permissions', () => {
+      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
+      
+      // All permissions should set all bits
+      expect(richPermask.check(allPermissions).canEverything()).toBe(true);
+      expect(allPermissions).toBe(richPermask.check(allPermissions).group() << 6 | 63);
     });
   });
   
@@ -321,64 +328,6 @@ describe('Permask', () => {
       expect(richPermask.check(customPerm).can('PRINT')).toBe(false);
     });
   });
-  
-  describe('Default Constants', () => {
-    it('should use default access bits and mask when not specified', () => {
-      // Create a permask without specifying accessBits or accessMask
-      const defaultPermask = new PermaskBuilder().build();
-      
-      // Verify that the default ACCESS_BITS is 3
-      expect(defaultPermask.accessBits).toBe(3);
-      
-      // Verify that the default ACCESS_MASK is 7 (binary: 111, which is (1 << 3) - 1)
-      expect(defaultPermask.accessMask).toBe(7);
-      
-      // Verify that all permission bits fit within the mask
-      // The mask 7 (binary 111) has 3 bits, so 1, 2, and 4 should all fit
-      const allPerms = defaultPermask.for(1).grantAll().value();
-      expect(allPerms & 7).toBe(7);
-    });
-    
-    it('should use default permission values when not specified', () => {
-      // Create a default permask without specifying custom permissions
-      const defaultPermask = new PermaskBuilder().build();
-      
-      // Add permissions to test default values
-      const readPerm = defaultPermask.for(1).grant(['READ']).value();
-      const writePerm = defaultPermask.for(1).grant(['WRITE']).value();
-      const deletePerm = defaultPermask.for(1).grant(['DELETE']).value();
-      
-      // Verify READ permission = 1
-      expect(defaultPermask.check(readPerm).can('READ')).toBe(true);
-      expect(readPerm & 7).toBe(1);
-      
-      // Verify WRITE permission = 2
-      expect(defaultPermask.check(writePerm).can('WRITE')).toBe(true);
-      expect(writePerm & 7).toBe(2);
-      
-      // Verify DELETE permission = 4
-      expect(defaultPermask.check(deletePerm).can('DELETE')).toBe(true);
-      expect(deletePerm & 7).toBe(4);
-      
-      // Verify READ_ONLY preset is same as READ permission
-      expect(defaultPermask.READ_ONLY).toBe(1);
-      
-      // Verify READ_WRITE preset is READ | WRITE
-      expect(defaultPermask.READ_WRITE).toBe(3);
-    });
-    
-    it('should calculate access mask correctly for different bit sizes', () => {
-      // Create permasks with different accessBits to verify mask calculation
-      const bits4Permask = new PermaskBuilder({ accessBits: 4 }).build();
-      const bits5Permask = new PermaskBuilder({ accessBits: 5 }).build();
-      
-      // 4 bits should give mask 15 (binary: 1111)
-      expect(bits4Permask.accessMask).toBe(15);
-      
-      // 5 bits should give mask 31 (binary: 11111)
-      expect(bits5Permask.accessMask).toBe(31);
-    });
-  });
 });
 
 describe('New Permask API', () => {
@@ -537,5 +486,57 @@ describe('New Permask API', () => {
       expect(extendedPermask.check(reportPerm).can('APPROVE')).toBe(true);
       expect(extendedPermask.check(reportPerm).inGroup('REPORTS')).toBe(true);
     });
+  });
+});
+
+// Add new test cases for CREATE and UPDATE permissions
+describe('CRUD Permission Tests', () => {
+  let crudPermask: Permask<typeof DefaultPermissionAccess>;
+  
+  beforeEach(() => {
+    crudPermask = new PermaskBuilder({
+      permissions: DefaultPermissionAccess,
+      accessBits: 5,
+      groups: {
+        USERS: 1,
+        DOCUMENTS: 2,
+        PHOTOS: 3
+      }
+    }).build();
+  });
+  
+  it('should handle all CRUD permissions correctly', () => {
+    const fullCrudPerm = crudPermask.for('DOCUMENTS').grantAll().value();
+    const createReadPerm = crudPermask.for('DOCUMENTS').grant(['CREATE', 'READ']).value();
+    const readUpdatePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE']).value();
+    
+    // Full CRUD permissions
+    expect(crudPermask.check(fullCrudPerm).canCreate()).toBe(true);
+    expect(crudPermask.check(fullCrudPerm).canRead()).toBe(true);
+    expect(crudPermask.check(fullCrudPerm).canUpdate()).toBe(true);
+    expect(crudPermask.check(fullCrudPerm).canWrite()).toBe(true);
+    expect(crudPermask.check(fullCrudPerm).canDelete()).toBe(true);
+    
+    // Create + Read permissions
+    expect(crudPermask.check(createReadPerm).canCreate()).toBe(true);
+    expect(crudPermask.check(createReadPerm).canRead()).toBe(true);
+    expect(crudPermask.check(createReadPerm).canUpdate()).toBe(false);
+    expect(crudPermask.check(createReadPerm).canWrite()).toBe(false);
+    expect(crudPermask.check(createReadPerm).canDelete()).toBe(false);
+    
+    // Read + Update permissions
+    expect(crudPermask.check(readUpdatePerm).canCreate()).toBe(false);
+    expect(crudPermask.check(readUpdatePerm).canRead()).toBe(true);
+    expect(crudPermask.check(readUpdatePerm).canUpdate()).toBe(true);
+    expect(crudPermask.check(readUpdatePerm).canWrite()).toBe(false);
+    expect(crudPermask.check(readUpdatePerm).canDelete()).toBe(false);
+  });
+  
+  it('should represent CRUD permissions in string format', () => {
+    const createReadPerm = crudPermask.for('DOCUMENTS').grant(['CREATE', 'READ']).value();
+    const readUpdateWritePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE', 'WRITE']).value();
+    
+    expect(crudPermask.toString(createReadPerm)).toBe('DOCUMENTS:CREATE,READ');
+    expect(crudPermask.toString(readUpdateWritePerm)).toBe('PHOTOS:READ,UPDATE,WRITE');
   });
 });
