@@ -1,198 +1,391 @@
-import { ACCESS_BITS, ACCESS_MASK } from "./constants/bitmask";
-import { PermissionAccess } from "./constants/permission";
+/**
+ * Default number of bits allocated for permissions (3 bits)
+ */
+const ACCESS_BITS = 3;
 
 /**
- * Special permission symbol that represents all permissions
+ * Default access mask for 3 bits (0b111 = 7)
+ */
+const ACCESS_MASK = (1 << ACCESS_BITS) - 1;
+
+/**
+ * Default permission values
+ */
+const PermissionAccess = {
+  READ: 1,   // 0b001
+  WRITE: 2,  // 0b010
+  DELETE: 4  // 0b100
+} as const;
+
+/**
+ * Special symbol representing all permissions
  */
 export const ALL_PERMISSIONS = Symbol('ALL_PERMISSIONS');
 
 /**
- * Type for permission lists that can include the special ALL symbol
+ * Permission builder for creating and checking permissions
  */
-export type PermissionList<T> = (keyof T | typeof ALL_PERMISSIONS)[];
-
-/**
- * Flexible permission management system that allows custom permission definitions,
- * bit allocations and groups.
- */
-export class Permask<T extends Record<string, number> = Record<string, number>> {
+export class PermaskBuilder<T extends Record<string, number> = Record<string, number>> {
   private permissions: T;
   private accessBits: number;
   private accessMask: number;
-  private groups: Record<string, number>;
+  private groups: Record<string, number> = {};
+  private permissionSets: Record<string, Array<keyof T>> = {};
   
-  // Common permission combinations for convenience
-  readonly FULL: number;
-  readonly NONE: number;
-  readonly READ_ONLY: number;
-  readonly READ_WRITE: number;
-  
-  /**
-   * Create a custom permission system
-   * @param options Configuration options for the permission system
-   */
   constructor(options: {
-    permissions?: T; // Custom permission types with bit values
-    accessBits?: number; // Number of bits allocated for permissions
-    accessMask?: number; // Mask for access bits
-    groups?: Record<string, number>; // Custom groups
+    permissions?: T;
+    accessBits?: number;
+    accessMask?: number;
+    groups?: Record<string, number>;
   } = {}) {
-    // Use the provided values or fall back to constants
     this.accessBits = options.accessBits || ACCESS_BITS;
     
-    // For accessMask, use provided value, or calculate based on custom bits, or use the constant
     if (options.accessMask !== undefined) {
       this.accessMask = options.accessMask;
     } else if (options.accessBits !== undefined) {
-      // Only recalculate if custom bits provided
       this.accessMask = (1 << this.accessBits) - 1;
     } else {
-      // Otherwise use the predefined constant
       this.accessMask = ACCESS_MASK;
     }
     
     this.permissions = (options.permissions || PermissionAccess as unknown as T);
     this.groups = options.groups || {};
     
-    // Validate that permissions fit within specified bits
-    const maxValue = this.accessMask;
+    // Validate permissions fit within specified bits
     for (const [key, value] of Object.entries(this.permissions)) {
-      if (value > maxValue) {
-        throw new Error(`Permission '${key}' value ${value} exceeds the maximum value ${maxValue} for ${this.accessBits} bits`);
+      if (value > this.accessMask) {
+        throw new Error(`Permission '${key}' value ${value} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits`);
       }
     }
+  }
+  
+  /**
+   * Define a new permission
+   */
+  definePermission(name: string, value: number): PermaskBuilder<T & Record<string, number>> {
+    if (value > this.accessMask) {
+      throw new Error(`Permission value ${value} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits`);
+    }
+    
+    (this.permissions as Record<string, number>)[name] = value;
+    return this as unknown as PermaskBuilder<T & Record<string, number>>;
+  }
+  
+  /**
+   * Define a new group
+   */
+  defineGroup(name: string, value: number): this {
+    this.groups[name] = value;
+    return this;
+  }
+  
+  /**
+   * Define a named set of permissions for reuse
+   */
+  definePermissionSet(name: string, permissions: Array<keyof T>): this {
+    this.permissionSets[name] = permissions;
+    return this;
+  }
+  
+  /**
+   * Build and return a Permask instance
+   */
+  build(): Permask<T> {
+    return new Permask<T>({
+      permissions: this.permissions,
+      accessBits: this.accessBits,
+      accessMask: this.accessMask,
+      groups: this.groups,
+      permissionSets: this.permissionSets
+    });
+  }
+}
 
-    // Initialize common permission combinations
-    this.FULL = this.accessMask;
-    this.NONE = 0;
+/**
+ * Permission granting context for creating new permissions
+ */
+export class PermissionContext<T extends Record<string, number>> {
+  private bitmask: number = 0;
+  
+  constructor(
+    private permask: Permask<T>,
+    group: number | string
+  ) {
+    const groupValue = typeof group === 'string' 
+      ? permask.getGroupByName(group) || 0 
+      : group;
+      
+    this.bitmask = groupValue << permask.accessBits;
+  }
+  
+  /**
+   * Grant specific permissions
+   */
+  grant(permissions: Array<keyof T | typeof ALL_PERMISSIONS>): this {
+    if (permissions.includes(ALL_PERMISSIONS)) {
+      this.bitmask = (this.bitmask & ~this.permask.accessMask) | this.permask.accessMask;
+      return this;
+    }
+    
+    for (const permission of permissions) {
+      if (permission === ALL_PERMISSIONS) continue;
+      
+      const permValue = this.permask.getPermissionValue(permission);
+      if (permValue) {
+        const currentAccess = this.bitmask & this.permask.accessMask;
+        const newAccess = currentAccess | permValue;
+        this.bitmask = (this.bitmask & ~this.permask.accessMask) | newAccess;
+      }
+    }
+    
+    return this;
+  }
+  
+  /**
+   * Grant a predefined permission set
+   */
+  grantSet(setName: string): this {
+    const permissions = this.permask.getPermissionSet(setName);
+    if (permissions) {
+      return this.grant(permissions);
+    }
+    return this;
+  }
+  
+  /**
+   * Grant full/all permissions
+   */
+  grantAll(): this {
+    return this.grant([ALL_PERMISSIONS]);
+  }
+  
+  /**
+   * Get the resulting permission bitmask
+   */
+  value(): number {
+    return this.bitmask;
+  }
+}
+
+/**
+ * Permission checking context
+ */
+export class PermissionCheck<T extends Record<string, number>> {
+  private access: number;
+  
+  constructor(
+    private permask: Permask<T>,
+    private bitmask: number
+  ) {
+    this.access = bitmask & permask.accessMask;
+  }
+  
+  /**
+   * Check if has specific permission
+   */
+  can(permission: keyof T): boolean {
+    const permValue = this.permask.getPermissionValue(permission);
+    return permValue ? (this.access & permValue) !== 0 : false;
+  }
+  
+  /**
+   * Check if has all specified permissions
+   */
+  canAll(permissions: Array<keyof T>): boolean {
+    for (const permission of permissions) {
+      if (!this.can(permission)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  /**
+   * Check if has any of the specified permissions
+   */
+  canAny(permissions: Array<keyof T>): boolean {
+    for (const permission of permissions) {
+      if (this.can(permission)) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  /**
+   * Check if has all possible permissions
+   */
+  canEverything(): boolean {
+    return this.access === this.permask.accessMask;
+  }
+  
+  /**
+   * Check if has standard READ permission
+   */
+  canRead(): boolean {
+    return (this.access & PermissionAccess.READ) !== 0;
+  }
+  
+  /**
+   * Check if has standard WRITE permission
+   */
+  canWrite(): boolean {
+    return (this.access & PermissionAccess.WRITE) !== 0;
+  }
+  
+  /**
+   * Check if has standard DELETE permission
+   */
+  canDelete(): boolean {
+    return (this.access & PermissionAccess.DELETE) !== 0;
+  }
+  
+  /**
+   * Get the group value
+   */
+  group(): number {
+    return this.bitmask >> this.permask.accessBits;
+  }
+  
+  /**
+   * Get the group name
+   */
+  groupName(): string | undefined {
+    return this.permask.getGroupName(this.bitmask);
+  }
+  
+  /**
+   * Check if permission belongs to specified group
+   */
+  inGroup(group: number | string): boolean {
+    return this.permask.hasGroup(this.bitmask, group);
+  }
+  
+  /**
+   * Get detailed information about this permission
+   */
+  explain(): {
+    group: number;
+    groupName?: string;
+    permissions: Partial<Record<keyof T, boolean>>;
+  } {
+    return this.permask.parse(this.bitmask);
+  }
+}
+
+/**
+ * Flexible permission management system with fluent API
+ */
+export class Permask<T extends Record<string, number> = Record<string, number>> {
+  // Common permission presets
+  readonly FULL_ACCESS: number;
+  readonly NO_ACCESS: number;
+  readonly READ_ONLY: number;
+  readonly READ_WRITE: number;
+  
+  // Make accessMask accessible to context classes
+  readonly accessMask: number;
+  readonly accessBits: number;
+  
+  private permissions: T;
+  private groups: Record<string, number>;
+  private permissionSets: Record<string, Array<keyof T>>;
+  
+  constructor(options: {
+    permissions: T;
+    accessBits: number;
+    accessMask: number;
+    groups: Record<string, number>;
+    permissionSets: Record<string, Array<keyof T>>;
+  }) {
+    this.permissions = options.permissions;
+    this.accessBits = options.accessBits;
+    this.accessMask = options.accessMask;
+    this.groups = options.groups;
+    this.permissionSets = options.permissionSets;
+    
+    // Initialize presets
+    this.FULL_ACCESS = this.accessMask;
+    this.NO_ACCESS = 0;
     this.READ_ONLY = PermissionAccess.READ;
     this.READ_WRITE = PermissionAccess.READ | PermissionAccess.WRITE;
   }
   
   /**
-   * Create a bitmask with the specified permissions and group
+   * Start building a permission for a specific group
    * @example
-   * // Basic usage
-   * const permission = permask.create('DOCUMENTS', ['READ', 'WRITE']);
-   * 
-   * // Grant all permissions
-   * const fullAccess = permask.create('DOCUMENTS', [ALL_PERMISSIONS]);
+   * // Create read-write permission for DOCUMENTS group
+   * const permission = permask.for('DOCUMENTS').grant(['READ', 'WRITE']).value();
    */
-  create(group: number | string, permissionList: PermissionList<T>): number {
-    // Check if ALL_PERMISSIONS is in the list
-    if (permissionList.includes(ALL_PERMISSIONS)) {
-      return this.createAllPermissions(group);
-    }
-    
-    let access = 0;
-    for (const permission of permissionList) {
-      if (permission === ALL_PERMISSIONS) continue; // Just to be safe
-      access |= this.permissions[permission as string] || 0;
-    }
-    
-    const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
-    return (groupValue << this.accessBits) | access;
+  for(group: number | string): PermissionContext<T> {
+    return new PermissionContext<T>(this, group);
   }
   
   /**
-   * Check if a bitmask has a specific permission
+   * Check permissions in a bitmask
+   * @example
+   * // Check if user has READ permission
+   * if (permask.check(userPermission).can('READ')) {
+   *   // Allow reading
+   * }
    */
-  hasPermission(bitmask: number, permission: keyof T): boolean {
-    const access = bitmask & this.accessMask;
-    const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
-    return (access & permValue) !== 0;
+  check(bitmask: number): PermissionCheck<T> {
+    return new PermissionCheck<T>(this, bitmask);
   }
   
   /**
-   * Get permission group from bitmask
+   * Get a permission value by key
    */
-  getGroup(bitmask: number): number {
-    return bitmask >> this.accessBits;
+  getPermissionValue(permission: keyof T): number {
+    return this.permissions[permission as string] || 0;
   }
   
   /**
-   * Get group name by group value
+   * Get a named permission set
+   */
+  getPermissionSet(name: string): Array<keyof T> | undefined {
+    return this.permissionSets[name];
+  }
+  
+  /**
+   * Get a group value by name
+   */
+  getGroupByName(name: string): number | undefined {
+    return this.groups[name];
+  }
+  
+  /**
+   * Get group name from a bitmask
    */
   getGroupName(bitmask: number): string | undefined {
-    const groupValue = this.getGroup(bitmask);
+    const groupValue = bitmask >> this.accessBits;
     const entry = Object.entries(this.groups).find(([, value]) => value === groupValue);
     return entry?.[0];
   }
   
   /**
-   * Check if bitmask has the specified group
+   * Check if a bitmask belongs to a specific group
    */
   hasGroup(bitmask: number, group: number | string): boolean {
     const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
-    return this.getGroup(bitmask) === groupValue;
+    return (bitmask >> this.accessBits) === groupValue;
   }
   
   /**
-   * Create a bitmask with ALL permissions for a given group
-   * Acts like a wildcard (*) permission
-   */
-  createAllPermissions(group: number | string): number {
-    const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
-    return (groupValue << this.accessBits) | this.accessMask;
-  }
-  
-  /**
-   * Check if bitmask has ALL permissions
-   */
-  hasAllPermissions(bitmask: number): boolean {
-    const access = bitmask & this.accessMask;
-    return access === this.accessMask;
-  }
-
-  /**
-   * Check if bitmask has ANY permissions
-   */
-  hasAnyPermission(bitmask: number): boolean {
-    const access = bitmask & this.accessMask;
-    return access !== 0;
-  }
-  
-  /**
-   * Add permission to existing bitmask without changing the group
-   */
-  addPermission(bitmask: number, permission: keyof T): number {
-    const group = this.getGroup(bitmask);
-    const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
-    const access = (bitmask & this.accessMask) | permValue;
-    return (group << this.accessBits) | access;
-  }
-  
-  /**
-   * Add ALL permissions to existing bitmask without changing the group
-   */
-  addAllPermissions(bitmask: number): number {
-    const group = this.getGroup(bitmask);
-    return (group << this.accessBits) | this.accessMask;
-  }
-  
-  /**
-   * Remove permission from existing bitmask
-   */
-  removePermission(bitmask: number, permission: keyof T): number {
-    const group = this.getGroup(bitmask);
-    const permValue = (this.permissions as Record<string, number>)[permission as string] || 0;
-    const access = (bitmask & this.accessMask) & ~permValue;
-    return (group << this.accessBits) | access;
-  }
-  
-  /**
-   * Parse bitmask into an object with group and permissions
+   * Parse a bitmask into human-readable form
    */
   parse(bitmask: number): {
     group: number;
     groupName?: string;
     permissions: Partial<Record<keyof T, boolean>>;
   } {
-    const group = this.getGroup(bitmask);
+    const group = bitmask >> this.accessBits;
+    const access = bitmask & this.accessMask;
     const permissions = {} as Partial<Record<keyof T, boolean>>;
     
-    for (const [key, value] of Object.entries(this.permissions)) {
-      permissions[key as keyof T] = this.hasPermission(bitmask, key as keyof T);
+    for (const key of Object.keys(this.permissions)) {
+      const permValue = this.permissions[key];
+      permissions[key as keyof T] = (access & permValue) !== 0;
     }
     
     return {
@@ -203,222 +396,78 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   }
   
   /**
-   * Register a new permission type (use with caution)
+   * Convert a string-based permission description to a bitmask
+   * @example
+   * // Create a permission from a string description
+   * const permission = permask.fromString('DOCUMENTS:READ,WRITE');
    */
-  registerPermission(name: string, bitValue: number): void {
-    if (bitValue > this.accessMask) {
-      throw new Error(`Permission value ${bitValue} exceeds the maximum value ${this.accessMask} for ${this.accessBits} bits`);
+  fromString(permissionString: string): number {
+    const [groupPart, permissionPart] = permissionString.split(':');
+    
+    if (!groupPart) return 0;
+    
+    const group = this.groups[groupPart] !== undefined ? this.groups[groupPart] : Number(groupPart) || 0;
+    
+    if (!permissionPart) {
+      return group << this.accessBits;
     }
     
-    (this.permissions as Record<string, number>)[name] = bitValue;
-  }
-  
-  /**
-   * Register a new group
-   */
-  registerGroup(name: string, value: number): void {
-    this.groups[name] = value;
-  }
-  
-  /**
-   * Create compatible bitmasks that can be used with the standard utils functions
-   */
-  createStandardBitmask({
-    group,
-    read = false, 
-    write = false, 
-    delete: del = false,
-    customPermissions = []
-  }: {
-    group: number | string;
-    read?: boolean;
-    write?: boolean;
-    delete?: boolean;
-    customPermissions?: (keyof T)[];
-  }): number {
-    const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
+    const permList = permissionPart.split(',')
+      .map(p => p.trim())
+      .filter(p => p !== '');
+      
+    if (permList.includes('*') || permList.includes('ALL')) {
+      return (group << this.accessBits) | this.accessMask;
+    }
     
-    // Create our own bitmask instead of using the utility function that uses ACCESS_BITS
-    let bitmask = 0;
-    if (read) bitmask |= PermissionAccess.READ;
-    if (write) bitmask |= PermissionAccess.WRITE;
-    if (del) bitmask |= PermissionAccess.DELETE;
-    
-    // Set group using our accessBits
-    bitmask |= (groupValue << this.accessBits);
-    
-    // Add any custom permissions
-    for (const permission of customPermissions) {
-      const permValue = (this.permissions as Record<string, number>)[permission as string];
-      if (permValue !== undefined) {
-        // Get the current access part without changing the group
-        const currentAccess = bitmask & this.accessMask;
-        // Add the new permission
-        const newAccess = currentAccess | permValue;
-        // Replace the access part in the result
-        bitmask = (bitmask & ~this.accessMask) | newAccess;
+    let access = 0;
+    for (const perm of permList) {
+      // Check if it's a permission set
+      if (this.permissionSets[perm]) {
+        for (const subPerm of this.permissionSets[perm]) {
+          access |= this.permissions[subPerm as string] || 0;
+        }
+      } else {
+        // Treat as individual permission
+        access |= this.permissions[perm as keyof T] || 0;
       }
     }
     
-    return bitmask;
+    return (group << this.accessBits) | access;
   }
   
   /**
-   * Compatibility methods with the standard utils
+   * Convert a bitmask to a string representation
    */
-  canRead(bitmask: number): boolean {
-    const access = bitmask & this.accessMask;
-    return (access & PermissionAccess.READ) !== 0;
-  }
-  
-  canWrite(bitmask: number): boolean {
-    const access = bitmask & this.accessMask;
-    return (access & PermissionAccess.WRITE) !== 0;
-  }
-  
-  canDelete(bitmask: number): boolean {
-    const access = bitmask & this.accessMask;
-    return (access & PermissionAccess.DELETE) !== 0;
-  }
-  
-  /**
-   * Get the full permission value (all bits set to 1)
-   * This is equivalent to having all permissions enabled
-   */
-  getFullAccessValue(): number {
-    return this.accessMask;
-  }
-  
-  /**
-   * Combine multiple permissions into a single bitmask value
-   * Useful for creating custom composite permissions like "FULL" or "READ_WRITE"
-   */
-  combinePermissions(permissionNames: (keyof T)[]): number {
-    let result = 0;
-    for (const permission of permissionNames) {
-      result |= this.permissions[permission as string] || 0;
-    }
-    return result;
-  }
-  
-  /**
-   * Get a map of all permission values for reference
-   * Helps users understand the bit values of each permission
-   */
-  getPermissionValues(): Record<string, { value: number, binaryValue: string }> {
-    const result: Record<string, { value: number, binaryValue: string }> = {};
+  toString(bitmask: number): string {
+    const parsed = this.parse(bitmask);
+    const groupName = parsed.groupName || parsed.group.toString();
     
-    for (const [key, value] of Object.entries(this.permissions)) {
-      // Convert to binary string with leading zeros based on bit count
-      const binaryValue = value.toString(2).padStart(this.accessBits, '0');
-      result[key] = { value, binaryValue };
+    const permissionNames = Object.entries(parsed.permissions)
+      .filter(([, enabled]) => enabled)
+      .map(([name]) => name);
+    
+    if (permissionNames.length === 0) {
+      return `${groupName}:NONE`;
     }
     
-    // Add the FULL access value for reference
-    result['FULL_ACCESS'] = {
-      value: this.accessMask,
-      binaryValue: this.accessMask.toString(2).padStart(this.accessBits, '0')
-    };
-    
-    return result;
-  }
-
-  /**
-   * Create a compatible bitmask that can be used with the standard utils functions
-   * @example
-   * // Create read-only access for group 1
-   * const readOnly = permask.createAccess(1);
-   * 
-   * // Create full access for ADMIN group
-   * const adminAccess = permask.createAccess('ADMIN', 'full');
-   * 
-   * // Create read-write access with custom permissions
-   * const customAccess = permask.createAccess('DOCUMENTS', 'read-write', ['SHARE']);
-   */
-  createAccess(
-    group: number | string, 
-    accessType: 'full' | 'none' | 'read-only' | 'read-write' = 'read-only',
-    customPermissions: (keyof T)[] = []
-  ): number {
-    const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
-    
-    // Start with the base access type
-    let bitmask = 0;
-    switch (accessType) {
-      case 'full':
-        bitmask = this.FULL;
-        break;
-      case 'read-write':
-        bitmask = this.READ_WRITE;
-        break;
-      case 'read-only':
-        bitmask = this.READ_ONLY;
-        break;
-      case 'none':
-      default:
-        bitmask = this.NONE;
+    // Check if all permissions are enabled
+    if ((bitmask & this.accessMask) === this.accessMask) {
+      return `${groupName}:ALL`;
     }
     
-    // Add group
-    bitmask |= (groupValue << this.accessBits);
-    
-    // Add any custom permissions
-    for (const permission of customPermissions) {
-      const permValue = (this.permissions as Record<string, number>)[permission as string];
-      if (permValue !== undefined) {
-        // Get the current access part without changing the group
-        const currentAccess = bitmask & this.accessMask;
-        // Add the new permission
-        const newAccess = currentAccess | permValue;
-        // Replace the access part in the result
-        bitmask = (bitmask & ~this.accessMask) | newAccess;
-      }
-    }
-    
-    return bitmask;
+    return `${groupName}:${permissionNames.join(',')}`;
   }
   
-  // Simplified version of createStandardBitmask
   /**
-   * Create standard permissions with a simpler interface
-   * @example
-   * // Read-only access
-   * const readOnly = permask.grant({
-   *   group: 'DOCUMENTS',
-   *   read: true
-   * });
-   * 
-   * // Full access
-   * const fullAccess = permask.grant({
-   *   group: 'ADMIN',
-   *   all: true
-   * });
+   * Create a new builder with the current configuration
    */
-  grant({
-    group,
-    all = false,
-    read = false, 
-    write = false, 
-    delete: del = false,
-    permissions = []
-  }: {
-    group: number | string;
-    all?: boolean;
-    read?: boolean;
-    write?: boolean;
-    delete?: boolean;
-    permissions?: (keyof T)[];
-  }): number {
-    if (all) {
-      return this.createAllPermissions(group);
-    }
-    
-    return this.createStandardBitmask({
-      group,
-      read,
-      write,
-      delete: del,
-      customPermissions: permissions
+  toBuilder(): PermaskBuilder<T> {
+    return new PermaskBuilder<T>({
+      permissions: this.permissions,
+      accessBits: this.accessBits,
+      accessMask: this.accessMask,
+      groups: { ...this.groups }
     });
   }
 }

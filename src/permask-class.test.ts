@@ -1,239 +1,176 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ALL_PERMISSIONS, Permask } from '../src/permask-class';
+import { ALL_PERMISSIONS, Permask, PermaskBuilder } from '../src/permask-class';
+import { PermissionAccess } from './constants/permission';
 
 describe('Permask', () => {
-  // Default permissions instance for basic tests
-  let defaultPermask: Permask<{
+  // Simple permissions for basic tests
+  let basicPermask: Permask<{
     READ: number;
     WRITE: number;
     DELETE: number;
   }>;
   
-  // Custom permissions for advanced tests
-  let customPermask: Permask<{
+  // Rich permissions for advanced tests
+  let richPermask: Permask<{
     VIEW: number;
     EDIT: number;
     DELETE: number;
     SHARE: number;
     PRINT: number;
-    ARCHIVE?: number;
   }>;
   
   beforeEach(() => {
-    // Create a default instance
-    defaultPermask = new Permask();
-    
-    // Create a custom instance with more bits
-    customPermask = new Permask({
+    // Set up basic permask using builder
+    basicPermask = new PermaskBuilder<{
+      READ: number;
+      WRITE: number;
+      DELETE: number;
+    }>({
       permissions: {
-        VIEW: 1,      // 0b00001
-        EDIT: 2,      // 0b00010
-        DELETE: 4,    // 0b00100
-        SHARE: 8,     // 0b01000
-        PRINT: 16,    // 0b10000
-      } as const,
-      accessBits: 6,  // Changed from 5 to 6 to accommodate values up to 63
+        READ: PermissionAccess.READ,    // 1
+        WRITE: PermissionAccess.WRITE,  // 2
+        DELETE: PermissionAccess.DELETE // 4
+      },
+      accessBits: 3,
+      groups: {
+        USERS: 1,
+        ADMINS: 2
+      }
+    }).build();
+    
+    // Set up rich permask using builder with more permissions and groups
+    richPermask = new PermaskBuilder<{
+      VIEW: number;
+      EDIT: number;
+      DELETE: number;
+      SHARE: number;
+      PRINT: number;
+    }>({
+      permissions: {
+        VIEW: 1,    // 0b00001
+        EDIT: 2,    // 0b00010
+        DELETE: 4,  // 0b00100
+        SHARE: 8,   // 0b01000
+        PRINT: 16,  // 0b10000
+      },
+      accessBits: 6,
       groups: {
         DOCUMENTS: 1,
         PHOTOS: 2,
-        VIDEOS: 3
+        VIDEOS: 3,
+        SPREADSHEETS: 4
       }
+    })
+    .definePermissionSet('VIEWER', ['VIEW'])
+    .definePermissionSet('EDITOR', ['VIEW', 'EDIT'])
+    .definePermissionSet('MANAGER', ['VIEW', 'EDIT', 'DELETE'])
+    .definePermissionSet('PUBLISHER', ['VIEW', 'SHARE'])
+    .definePermissionSet('ADMIN', ['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT'])
+    .build();
+  });
+  
+  describe('Permission Creation', () => {
+    it('should create basic permissions with correct bitmask values', () => {
+      const readPermission = basicPermask.for('USERS').grant(['READ']).value();
+      const readWritePermission = basicPermask.for('USERS').grant(['READ', 'WRITE']).value();
+      
+      // Group 1 (USERS) << 3 bits = 8, plus READ (1) = 9
+      expect(readPermission).toBe(9);
+      
+      // Group 1 (USERS) << 3 bits = 8, plus READ (1) + WRITE (2) = 11
+      expect(readWritePermission).toBe(11);
+    });
+    
+    it('should create permissions with explicit group IDs', () => {
+      const permission = richPermask.for(2).grant(['VIEW', 'EDIT']).value();
+      
+      // Group 2 (PHOTOS) << 6 bits = 128, plus VIEW (1) + EDIT (2) = 131
+      expect(permission).toBe(131);
+      expect(richPermask.check(permission).group()).toBe(2);
+      expect(richPermask.check(permission).groupName()).toBe('PHOTOS');
+    });
+    
+    it('should handle ALL_PERMISSIONS symbol', () => {
+      const allPermissions = richPermask.for('DOCUMENTS').grant([ALL_PERMISSIONS]).value();
+      const alternateWay = richPermask.for('DOCUMENTS').grantAll().value();
+      
+      // All permissions should set all bits (63 for 6 bits)
+      expect(richPermask.check(allPermissions).canEverything()).toBe(true);
+      expect(allPermissions).toBe(richPermask.check(allPermissions).group() << 6 | 63);
+      expect(allPermissions).toEqual(alternateWay);
+    });
+    
+    it('should handle permission sets', () => {
+      const editorPerm = richPermask.for('DOCUMENTS').grantSet('EDITOR').value();
+      const managerPerm = richPermask.for('PHOTOS').grantSet('MANAGER').value();
+      
+      // Editor has VIEW and EDIT
+      expect(richPermask.check(editorPerm).can('VIEW')).toBe(true);
+      expect(richPermask.check(editorPerm).can('EDIT')).toBe(true);
+      expect(richPermask.check(editorPerm).can('DELETE')).toBe(false);
+      
+      // Manager has VIEW, EDIT, and DELETE
+      expect(richPermask.check(managerPerm).can('VIEW')).toBe(true);
+      expect(richPermask.check(managerPerm).can('EDIT')).toBe(true);
+      expect(richPermask.check(managerPerm).can('DELETE')).toBe(true);
+      expect(richPermask.check(managerPerm).can('SHARE')).toBe(false);
+    });
+    
+    it('should combine permission sets and individual permissions', () => {
+      // Grant editor set plus SHARE permission
+      const customPerm = richPermask.for('VIDEOS')
+        .grantSet('EDITOR')
+        .grant(['SHARE'])
+        .value();
+      
+      expect(richPermask.check(customPerm).can('VIEW')).toBe(true);
+      expect(richPermask.check(customPerm).can('EDIT')).toBe(true);
+      expect(richPermask.check(customPerm).can('SHARE')).toBe(true);
+      expect(richPermask.check(customPerm).can('DELETE')).toBe(false);
+      expect(richPermask.check(customPerm).can('PRINT')).toBe(false);
     });
   });
   
-  describe('Initialization', () => {
-    it('should initialize with default values', () => {
-      expect(defaultPermask).toBeDefined();
+  describe('Permission Checking', () => {
+    it('should check individual permissions', () => {
+      const perm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
       
-      // Create a permission to verify defaults are working
-      const permission = defaultPermask.createStandardBitmask({
-        group: 1,
-        read: true
-      });
-      
-      expect(defaultPermask.canRead(permission)).toBe(true);
-      expect(defaultPermask.canWrite(permission)).toBe(false);
-      expect(defaultPermask.getGroup(permission)).toBe(1);
+      expect(richPermask.check(perm).can('VIEW')).toBe(true);
+      expect(richPermask.check(perm).can('EDIT')).toBe(true);
+      expect(richPermask.check(perm).can('DELETE')).toBe(false);
     });
     
-    it('should initialize with custom permissions', () => {
-      expect(customPermask).toBeDefined();
+    it('should check multiple permissions at once', () => {
+      const perm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT', 'SHARE']).value();
       
-      // Create a custom permission
-      const permission = customPermask.create('DOCUMENTS', ['VIEW', 'EDIT']);
+      // All permissions check
+      expect(richPermask.check(perm).canAll(['VIEW', 'EDIT'])).toBe(true);
+      expect(richPermask.check(perm).canAll(['VIEW', 'DELETE'])).toBe(false);
       
-      // Verify custom permissions work
-      expect(customPermask.hasPermission(permission, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(permission, 'EDIT')).toBe(true);
-      expect(customPermask.hasPermission(permission, 'DELETE')).toBe(false);
+      // Any permissions check
+      expect(richPermask.check(perm).canAny(['DELETE', 'PRINT'])).toBe(false);
+      expect(richPermask.check(perm).canAny(['EDIT', 'DELETE'])).toBe(true);
     });
     
-    it('should throw error for permission values exceeding bit capacity', () => {
-      expect(() => new Permask({
-        permissions: { INVALID: 16 },
-        accessBits: 3  // Only allows values up to 7
-      })).toThrow(/exceeds the maximum value/);
-    });
-  });
-  
-  describe('Permission Operations', () => {
-    it('should create permissions with the correct bitmask', () => {
-      // Create a permission for documents that allows view and edit
-      const permission = customPermask.create('DOCUMENTS', ['VIEW', 'EDIT']);
+    it('should check for complete permissions', () => {
+      const partialPerm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const allPerm = richPermask.for('DOCUMENTS').grantAll().value();
       
-      // VIEW (1) + EDIT (2) = 3
-      // GROUP (1) << 6 = 64 (updated for 6 bits)
-      // Expected: 64 | 3 = 67
-      expect(permission).toBe(67);
-      
-      // Parse and verify components
-      const parsed = customPermask.parse(permission);
-      expect(parsed.group).toBe(1);
-      expect(parsed.groupName).toBe('DOCUMENTS');
-      expect(parsed.permissions.VIEW).toBe(true);
-      expect(parsed.permissions.EDIT).toBe(true);
-      expect(parsed.permissions.DELETE).toBe(false);
+      expect(richPermask.check(partialPerm).canEverything()).toBe(false);
+      expect(richPermask.check(allPerm).canEverything()).toBe(true);
     });
     
-    it('should add permissions correctly', () => {
-      // Create a base permission
-      const base = customPermask.create('DOCUMENTS', ['VIEW']);
+    it('should provide detailed permission explanation', () => {
+      const perm = richPermask.for('PHOTOS').grant(['VIEW', 'SHARE']).value();
       
-      // Add EDIT permission
-      const withEdit = customPermask.addPermission(base, 'EDIT');
+      const details = richPermask.check(perm).explain();
       
-      expect(customPermask.hasPermission(withEdit, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(withEdit, 'EDIT')).toBe(true);
-      expect(customPermask.getGroup(withEdit)).toBe(1); // Group should be unchanged
-    });
-    
-    it('should remove permissions correctly', () => {
-      // Create a permission with multiple accesses
-      const fullAccess = customPermask.create('DOCUMENTS', ['VIEW', 'EDIT', 'DELETE']);
-      
-      // Remove the EDIT permission
-      const reducedAccess = customPermask.removePermission(fullAccess, 'EDIT');
-      
-      expect(customPermask.hasPermission(reducedAccess, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(reducedAccess, 'EDIT')).toBe(false);
-      expect(customPermask.hasPermission(reducedAccess, 'DELETE')).toBe(true);
-    });
-    
-    it('should check permissions correctly', () => {
-      const permission = customPermask.create('PHOTOS', ['VIEW', 'SHARE']);
-      
-      expect(customPermask.hasPermission(permission, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(permission, 'SHARE')).toBe(true);
-      expect(customPermask.hasPermission(permission, 'EDIT')).toBe(false);
-      expect(customPermask.hasPermission(permission, 'DELETE')).toBe(false);
-      expect(customPermask.hasPermission(permission, 'PRINT')).toBe(false);
-    });
-  });
-  
-  describe('Group Operations', () => {
-    it('should get group value correctly', () => {
-      const permission = customPermask.create('VIDEOS', ['VIEW']);
-      expect(customPermask.getGroup(permission)).toBe(3);
-    });
-    
-    it('should get group name correctly', () => {
-      const permission = customPermask.create('PHOTOS', ['VIEW']);
-      expect(customPermask.getGroupName(permission)).toBe('PHOTOS');
-    });
-    
-    it('should check group membership correctly', () => {
-      const permission = customPermask.create('DOCUMENTS', ['VIEW']);
-      
-      expect(customPermask.hasGroup(permission, 'DOCUMENTS')).toBe(true);
-      expect(customPermask.hasGroup(permission, 'PHOTOS')).toBe(false);
-      expect(customPermask.hasGroup(permission, 1)).toBe(true);
-      expect(customPermask.hasGroup(permission, 2)).toBe(false);
-    });
-    
-    it('should handle unknown group names gracefully', () => {
-      const permission = customPermask.create(999, ['VIEW']);
-      expect(customPermask.getGroupName(permission)).toBeUndefined();
-      
-      // Creating with non-existent string group should use group 0
-      const noGroup = customPermask.create('NON_EXISTENT', ['VIEW']);
-      expect(customPermask.getGroup(noGroup)).toBe(0);
-    });
-  });
-  
-  describe('Standard Bitmask Compatibility', () => {
-    it('should create standard bitmasks correctly', () => {
-      const permission = defaultPermask.createStandardBitmask({
-        group: 5,
-        read: true,
-        write: true,
-        delete: false
-      });
-      
-      expect(defaultPermask.canRead(permission)).toBe(true);
-      expect(defaultPermask.canWrite(permission)).toBe(true);
-      expect(defaultPermask.canDelete(permission)).toBe(false);
-      expect(defaultPermask.getGroup(permission)).toBe(5);
-    });
-    
-    it('should work with named groups', () => {
-      customPermask.registerGroup('SPREADSHEETS', 10);
-      
-      const permission = customPermask.createStandardBitmask({
-        group: 'SPREADSHEETS',
-        read: true,
-        write: true,
-        delete: false,
-        customPermissions: ['SHARE']
-      });
-      
-      expect(customPermask.getGroup(permission)).toBe(10);
-      expect(customPermask.canRead(permission)).toBe(true);
-      expect(customPermask.canWrite(permission)).toBe(true);
-      expect(customPermask.hasPermission(permission, 'SHARE')).toBe(true);
-    });
-  });
-  
-  describe('Dynamic Registration', () => {
-    it('should register new permissions at runtime', () => {
-      // Register a new permission - changed from 32 to 32 which fits in 6 bits
-      customPermask.registerPermission('ARCHIVE', 32);
-      
-      // Create permission using the new type
-      const permission = customPermask.create('DOCUMENTS', ['VIEW', 'ARCHIVE']);
-      
-      expect(customPermask.hasPermission(permission, 'ARCHIVE')).toBe(true);
-      expect(customPermask.parse(permission).permissions['ARCHIVE']).toBe(true);
-    });
-    
-    it('should throw error when registering permissions that exceed bit capacity', () => {
-      // Should test with a value that definitely exceeds the capacity (now 6 bits = max 63)
-      expect(() => customPermask.registerPermission('OVERFLOW', 64)).toThrow(/exceeds the maximum value/);
-    });
-    
-    it('should register new groups at runtime', () => {
-      // Register a new group
-      customPermask.registerGroup('ARCHIVES', 20);
-      
-      // Create permission for the new group
-      const permission = customPermask.create('ARCHIVES', ['VIEW']);
-      
-      expect(customPermask.getGroup(permission)).toBe(20);
-      expect(customPermask.getGroupName(permission)).toBe('ARCHIVES');
-    });
-  });
-  
-  describe('Parse Functionality', () => {
-    it('should parse bitmasks to detailed objects', () => {
-      const permission = customPermask.create('VIDEOS', ['VIEW', 'EDIT', 'SHARE']);
-      
-      const parsed = customPermask.parse(permission);
-      
-      expect(parsed).toEqual({
-        group: 3,
-        groupName: 'VIDEOS',
+      expect(details).toEqual({
+        group: 2,
+        groupName: 'PHOTOS',
         permissions: {
           VIEW: true,
-          EDIT: true,
+          EDIT: false,
           DELETE: false,
           SHARE: true,
           PRINT: false
@@ -241,239 +178,364 @@ describe('Permask', () => {
       });
     });
     
-    it('should handle parsing bitmasks with unknown groups', () => {
-      // Create a permission with a group that doesn't have a name
-      const permission = customPermask.create(42, ['VIEW']);
+    it('should check group membership', () => {
+      const perm = richPermask.for('DOCUMENTS').grant(['VIEW']).value();
       
-      const parsed = customPermask.parse(permission);
-      
-      expect(parsed.group).toBe(42);
-      expect(parsed.groupName).toBeUndefined();
-      expect(parsed.permissions.VIEW).toBe(true);
+      expect(richPermask.check(perm).inGroup('DOCUMENTS')).toBe(true);
+      expect(richPermask.check(perm).inGroup('PHOTOS')).toBe(false);
+      expect(richPermask.check(perm).inGroup(1)).toBe(true);
     });
   });
   
-  describe('Advanced Features', () => {
-    it('should handle custom access mask', () => {
-      // Create a completely separate instance with its own configuration
-      // to avoid interference with other tests
-      const customMaskPermask = new Permask({
-        permissions: { TEST: 1, TEST2: 2 }, // Start with minimal permissions
-        accessBits: 4,
-        accessMask: 0b1111  // Explicitly set mask
-      });
+  describe('String Representation', () => {
+    it('should convert permissions to strings', () => {
+      const perm1 = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm2 = richPermask.for('PHOTOS').grantAll().value();
+      const perm3 = richPermask.for('VIDEOS').grant([]).value();
       
-      // Register a permission that's at the limit
-      expect(() => customMaskPermask.registerPermission('MAX', 15)).not.toThrow();
-      // Register a permission that exceeds the limit
-      expect(() => customMaskPermask.registerPermission('OVER', 16)).toThrow(/exceeds the maximum value/);
+      expect(richPermask.toString(perm1)).toBe('DOCUMENTS:VIEW,EDIT');
+      expect(richPermask.toString(perm2)).toBe('PHOTOS:ALL');
+      expect(richPermask.toString(perm3)).toBe('VIDEOS:NONE');
     });
     
-    it('should handle the default values correctly', () => {
-      const permission = defaultPermask.createStandardBitmask({
-        group: 1,
-        read: true
-      });
+    it('should parse permission strings', () => {
+      const perm1 = richPermask.fromString('DOCUMENTS:VIEW,EDIT');
+      const perm2 = richPermask.fromString('PHOTOS:ALL');
+      const perm3 = richPermask.fromString('VIDEOS:MANAGER');
+      const perm4 = richPermask.fromString('5:VIEW,SHARE'); // Numeric group
       
-      // Instead of assuming specific values, check the functional behavior
-      expect(defaultPermask.canRead(permission)).toBe(true);
-      expect(defaultPermask.canWrite(permission)).toBe(false);
-      expect(defaultPermask.getGroup(permission)).toBe(1);
+      expect(richPermask.check(perm1).canAll(['VIEW', 'EDIT'])).toBe(true);
+      expect(richPermask.check(perm1).can('DELETE')).toBe(false);
+      
+      expect(richPermask.check(perm2).canEverything()).toBe(true);
+      
+      // Permission set expansion
+      expect(richPermask.check(perm3).can('VIEW')).toBe(true);
+      expect(richPermask.check(perm3).can('EDIT')).toBe(true);
+      expect(richPermask.check(perm3).can('DELETE')).toBe(true);
+      
+      // Numeric group handling
+      expect(richPermask.check(perm4).group()).toBe(5);
+      expect(richPermask.check(perm4).canAll(['VIEW', 'SHARE'])).toBe(true);
+    });
+    
+    it('should handle alternative string formats', () => {
+      const permWithStar = richPermask.fromString('DOCUMENTS:*');
+      const permWithEmpty = richPermask.fromString('VIDEOS:');
+      
+      expect(richPermask.check(permWithStar).canEverything()).toBe(true);
+      expect(richPermask.check(permWithEmpty).canAny(['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT'])).toBe(false);
     });
   });
-
-  describe('Edge Cases', () => {
-    // Create a separate instance for edge case tests to avoid interference
-    let edgeCasePermask: Permask<{
-      VIEW: number;
-      [key: string]: number;
-    }>;
+  
+  describe('Builder Pattern', () => {
+    it('should extend permissions with builder', () => {
+      // Create extended version of the permissions system
+      const extendedPermask = richPermask.toBuilder()
+        .definePermission('APPROVE', 32)
+        .defineGroup('REPORTS', 5)
+        .definePermissionSet('APPROVER', ['VIEW', 'APPROVE'])
+        .build();
+      
+      // Create permission using new components
+      const reportPerm = extendedPermask.for('REPORTS').grantSet('APPROVER').value();
+      
+      expect(extendedPermask.check(reportPerm).can('VIEW')).toBe(true);
+      expect(extendedPermask.check(reportPerm).can('APPROVE')).toBe(true);
+      expect(extendedPermask.check(reportPerm).inGroup('REPORTS')).toBe(true);
+    });
     
-    beforeEach(() => {
-      edgeCasePermask = new Permask({
+    it('should validate permission values', () => {
+      // Try to add a permission that exceeds bit capacity (6 bits = max 63)
+      expect(() => {
+        richPermask.toBuilder()
+          .definePermission('OVERFLOW', 64)
+          .build();
+      }).toThrow(/exceeds maximum value/);
+    });
+  });
+  
+  describe('Edge Cases', () => {
+    it('should handle group 0 correctly', () => {
+      const perm = richPermask.for(0).grant(['VIEW']).value();
+      
+      expect(richPermask.check(perm).group()).toBe(0);
+      expect(richPermask.check(perm).can('VIEW')).toBe(true);
+    });
+    
+    it('should handle non-existent groups gracefully', () => {
+      const perm = richPermask.for('NON_EXISTENT').grant(['VIEW']).value();
+      
+      expect(richPermask.check(perm).group()).toBe(0); // Default to group 0
+      expect(richPermask.check(perm).can('VIEW')).toBe(true);
+    });
+    
+    it('should handle non-existent permissions gracefully', () => {
+      // @ts-ignore - Intentionally testing with a non-existent permission
+      const perm = richPermask.for('DOCUMENTS').grant(['NON_EXISTENT']).value();
+      
+      expect(richPermask.check(perm).group()).toBe(1); // Group should be set
+      expect(richPermask.check(perm).can('VIEW')).toBe(false); // No permissions granted
+    });
+    
+    it('should handle empty permission lists', () => {
+      const perm = richPermask.for('DOCUMENTS').grant([]).value();
+      
+      expect(richPermask.check(perm).group()).toBe(1);
+      expect(richPermask.check(perm).can('VIEW')).toBe(false);
+      expect(richPermask.check(perm).canAny(['VIEW', 'EDIT', 'DELETE', 'SHARE'])).toBe(false);
+    });
+  });
+  
+  describe('Permission Sets', () => {
+    it('should use predefined permission sets', () => {
+      const viewerPerm = richPermask.for('DOCUMENTS').grantSet('VIEWER').value();
+      const editorPerm = richPermask.for('DOCUMENTS').grantSet('EDITOR').value();
+      const managerPerm = richPermask.for('DOCUMENTS').grantSet('MANAGER').value();
+      const adminPerm = richPermask.for('DOCUMENTS').grantSet('ADMIN').value();
+      
+      // Check viewer permissions
+      expect(richPermask.check(viewerPerm).can('VIEW')).toBe(true);
+      expect(richPermask.check(viewerPerm).can('EDIT')).toBe(false);
+      
+      // Check editor permissions
+      expect(richPermask.check(editorPerm).canAll(['VIEW', 'EDIT'])).toBe(true);
+      expect(richPermask.check(editorPerm).can('DELETE')).toBe(false);
+      
+      // Check manager permissions
+      expect(richPermask.check(managerPerm).canAll(['VIEW', 'EDIT', 'DELETE'])).toBe(true);
+      expect(richPermask.check(managerPerm).can('SHARE')).toBe(false);
+      
+      // Check admin permissions
+      expect(richPermask.check(adminPerm).canAll(['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT'])).toBe(true);
+    });
+    
+    it('should combine sets with additional permissions', () => {
+      // Grant manager set plus SHARE permission
+      const customPerm = richPermask.for('DOCUMENTS')
+        .grantSet('MANAGER')
+        .grant(['SHARE'])
+        .value();
+      
+      expect(richPermask.check(customPerm).canAll(['VIEW', 'EDIT', 'DELETE', 'SHARE'])).toBe(true);
+      expect(richPermask.check(customPerm).can('PRINT')).toBe(false);
+    });
+  });
+  
+  describe('Default Constants', () => {
+    it('should use default access bits and mask when not specified', () => {
+      // Create a permask without specifying accessBits or accessMask
+      const defaultPermask = new PermaskBuilder().build();
+      
+      // Verify that the default ACCESS_BITS is 3
+      expect(defaultPermask.accessBits).toBe(3);
+      
+      // Verify that the default ACCESS_MASK is 7 (binary: 111, which is (1 << 3) - 1)
+      expect(defaultPermask.accessMask).toBe(7);
+      
+      // Verify that all permission bits fit within the mask
+      // The mask 7 (binary 111) has 3 bits, so 1, 2, and 4 should all fit
+      const allPerms = defaultPermask.for(1).grantAll().value();
+      expect(allPerms & 7).toBe(7);
+    });
+    
+    it('should use default permission values when not specified', () => {
+      // Create a default permask without specifying custom permissions
+      const defaultPermask = new PermaskBuilder().build();
+      
+      // Add permissions to test default values
+      const readPerm = defaultPermask.for(1).grant(['READ']).value();
+      const writePerm = defaultPermask.for(1).grant(['WRITE']).value();
+      const deletePerm = defaultPermask.for(1).grant(['DELETE']).value();
+      
+      // Verify READ permission = 1
+      expect(defaultPermask.check(readPerm).can('READ')).toBe(true);
+      expect(readPerm & 7).toBe(1);
+      
+      // Verify WRITE permission = 2
+      expect(defaultPermask.check(writePerm).can('WRITE')).toBe(true);
+      expect(writePerm & 7).toBe(2);
+      
+      // Verify DELETE permission = 4
+      expect(defaultPermask.check(deletePerm).can('DELETE')).toBe(true);
+      expect(deletePerm & 7).toBe(4);
+      
+      // Verify READ_ONLY preset is same as READ permission
+      expect(defaultPermask.READ_ONLY).toBe(1);
+      
+      // Verify READ_WRITE preset is READ | WRITE
+      expect(defaultPermask.READ_WRITE).toBe(3);
+    });
+    
+    it('should calculate access mask correctly for different bit sizes', () => {
+      // Create permasks with different accessBits to verify mask calculation
+      const bits4Permask = new PermaskBuilder({ accessBits: 4 }).build();
+      const bits5Permask = new PermaskBuilder({ accessBits: 5 }).build();
+      
+      // 4 bits should give mask 15 (binary: 1111)
+      expect(bits4Permask.accessMask).toBe(15);
+      
+      // 5 bits should give mask 31 (binary: 11111)
+      expect(bits5Permask.accessMask).toBe(31);
+    });
+  });
+});
+
+describe('New Permask API', () => {
+  let permask: Permask<{
+    VIEW: number;
+    EDIT: number;
+    DELETE: number;
+    SHARE: number;
+    PRINT: number;
+  }>;
+  
+  beforeEach(() => {
+    // Create using builder pattern
+    permask = new PermaskBuilder<{
+      VIEW: number;
+      EDIT: number;
+      DELETE: number;
+      SHARE: number;
+      PRINT: number;
+    }>({
+      permissions: {
+        VIEW: 1,
+        EDIT: 2,
+        DELETE: 4,
+        SHARE: 8,
+        PRINT: 16
+      },
+      accessBits: 6,
+      groups: {
+        DOCUMENTS: 1,
+        PHOTOS: 2,
+        VIDEOS: 3
+      }
+    })
+    .definePermissionSet('VIEWER', ['VIEW'])
+    .definePermissionSet('EDITOR', ['VIEW', 'EDIT'])
+    .definePermissionSet('MANAGER', ['VIEW', 'EDIT', 'DELETE'])
+    .definePermissionSet('ADMIN', ['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT'])
+    .build();
+  });
+  
+  describe('Building Permissions', () => {
+    it('should create permissions using the fluent API', () => {
+      // Grant specific permissions
+      const viewEditPerm = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      
+      expect(permask.check(viewEditPerm).can('VIEW')).toBe(true);
+      expect(permask.check(viewEditPerm).can('EDIT')).toBe(true);
+      expect(permask.check(viewEditPerm).can('DELETE')).toBe(false);
+      expect(permask.check(viewEditPerm).inGroup('DOCUMENTS')).toBe(true);
+    });
+    
+    it('should support permission sets', () => {
+      // Grant a permission set
+      const managerPerm = permask.for('PHOTOS').grantSet('MANAGER').value();
+      
+      expect(permask.check(managerPerm).can('VIEW')).toBe(true);
+      expect(permask.check(managerPerm).can('EDIT')).toBe(true);
+      expect(permask.check(managerPerm).can('DELETE')).toBe(true);
+      expect(permask.check(managerPerm).can('SHARE')).toBe(false);
+      expect(permask.check(managerPerm).inGroup('PHOTOS')).toBe(true);
+    });
+    
+    it('should handle ALL_PERMISSIONS', () => {
+      // Grant all permissions
+      const allPerm = permask.for('VIDEOS').grantAll().value();
+      
+      expect(permask.check(allPerm).canEverything()).toBe(true);
+      expect(permask.check(allPerm).can('VIEW')).toBe(true);
+      expect(permask.check(allPerm).can('EDIT')).toBe(true);
+      expect(permask.check(allPerm).can('DELETE')).toBe(true);
+      expect(permask.check(allPerm).can('SHARE')).toBe(true);
+      expect(permask.check(allPerm).can('PRINT')).toBe(true);
+    });
+  });
+  
+  describe('Checking Permissions', () => {
+    it('should check permissions with the fluent API', () => {
+      const perm = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      
+      // Individual checks
+      expect(permask.check(perm).can('VIEW')).toBe(true);
+      expect(permask.check(perm).can('DELETE')).toBe(false);
+      
+      // Check multiple permissions
+      expect(permask.check(perm).canAll(['VIEW', 'EDIT'])).toBe(true);
+      expect(permask.check(perm).canAll(['VIEW', 'DELETE'])).toBe(false);
+      expect(permask.check(perm).canAny(['DELETE', 'SHARE'])).toBe(false);
+      expect(permask.check(perm).canAny(['EDIT', 'DELETE'])).toBe(true);
+      
+      // Group checks
+      expect(permask.check(perm).inGroup('DOCUMENTS')).toBe(true);
+      expect(permask.check(perm).inGroup('PHOTOS')).toBe(false);
+      expect(permask.check(perm).group()).toBe(1);
+      expect(permask.check(perm).groupName()).toBe('DOCUMENTS');
+    });
+    
+    it('should provide detailed explanation of permissions', () => {
+      const perm = permask.for('PHOTOS').grant(['VIEW', 'EDIT']).value();
+      
+      const details = permask.check(perm).explain();
+      
+      expect(details).toEqual({
+        group: 2,
+        groupName: 'PHOTOS',
         permissions: {
-          VIEW: 1
-        },
-        accessBits: 4, // Use a higher bit count for these tests
-        groups: {
-          DOCUMENTS: 1
+          VIEW: true,
+          EDIT: true,
+          DELETE: false,
+          SHARE: false,
+          PRINT: false
         }
       });
     });
-
-    it('should handle group 0 correctly', () => {
-      const permission = edgeCasePermask.create(0, ['VIEW']);
-      expect(edgeCasePermask.getGroup(permission)).toBe(0);
+  });
+  
+  describe('String Conversion', () => {
+    it('should convert permissions to strings', () => {
+      const perm1 = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm2 = permask.for('PHOTOS').grantAll().value();
+      const perm3 = permask.for('VIDEOS').grant([]).value();
+      
+      expect(permask.toString(perm1)).toBe('DOCUMENTS:VIEW,EDIT');
+      expect(permask.toString(perm2)).toBe('PHOTOS:ALL');
+      expect(permask.toString(perm3)).toBe('VIDEOS:NONE');
     });
     
-    it('should handle permission value 0 correctly', () => {
-      edgeCasePermask.registerPermission('NO_ACCESS', 0);
+    it('should parse permission strings', () => {
+      const perm1 = permask.fromString('DOCUMENTS:VIEW,EDIT');
+      const perm2 = permask.fromString('PHOTOS:ALL');
+      const perm3 = permask.fromString('VIDEOS:MANAGER');
       
-      const permission = edgeCasePermask.create('DOCUMENTS', ['NO_ACCESS']);
+      expect(permask.check(perm1).can('VIEW')).toBe(true);
+      expect(permask.check(perm1).can('EDIT')).toBe(true);
+      expect(permask.check(perm1).can('DELETE')).toBe(false);
       
-      // Creating with no actual permission bits results in 0 access
-      expect(edgeCasePermask.hasPermission(permission, 'VIEW')).toBe(false);
-      expect(edgeCasePermask.hasPermission(permission, 'NO_ACCESS')).toBe(false); // 0 & anything = 0
-    });
-    
-    it('should handle attempting to use undefined permissions', () => {
-      const permission = edgeCasePermask.create('DOCUMENTS', ['VIEW']);
+      expect(permask.check(perm2).canEverything()).toBe(true);
       
-      // @ts-ignore - Intentionally testing with a non-existent permission
-      expect(edgeCasePermask.hasPermission(permission, 'NON_EXISTENT')).toBe(false);
-      
-      // @ts-ignore - Intentionally testing with a non-existent permission
-      const updatedPermission = edgeCasePermask.addPermission(permission, 'NON_EXISTENT');
-      
-      // The permission should be unchanged since NON_EXISTENT maps to value 0
-      expect(edgeCasePermask.hasPermission(updatedPermission, 'VIEW')).toBe(true);
-      expect(edgeCasePermask.getGroup(updatedPermission)).toBe(1);
+      expect(permask.check(perm3).can('VIEW')).toBe(true);
+      expect(permask.check(perm3).can('EDIT')).toBe(true);
+      expect(permask.check(perm3).can('DELETE')).toBe(true);
+      expect(permask.check(perm3).can('SHARE')).toBe(false);
     });
   });
   
-  describe('Permission Helper Methods', () => {
-    it('should return the full access value', () => {
-      // For customPermask with 6 bits, the full value should be 63 (2^6 - 1)
-      expect(customPermask.getFullAccessValue()).toBe(63);
+  describe('Builder Pattern', () => {
+    it('should modify existing permissions using toBuilder', () => {
+      // Create a modified version of the permask
+      const extendedPermask = permask.toBuilder()
+        .definePermission('APPROVE', 32)
+        .defineGroup('REPORTS', 4)
+        .build();
       
-      // For defaultPermask, it should match the standard ACCESS_MASK
-      expect(defaultPermask.getFullAccessValue()).toBe(7); // 3 bits = 2^3 - 1 = 7
-    });
-    
-    it('should combine permissions correctly', () => {
-      // VIEW (1) + EDIT (2) = 3
-      const combined = customPermask.combinePermissions(['VIEW', 'EDIT']);
-      expect(combined).toBe(3);
+      const reportPerm = extendedPermask.for('REPORTS').grant(['VIEW', 'APPROVE']).value();
       
-      // Empty list should give 0
-      expect(customPermask.combinePermissions([])).toBe(0);
-      
-      // All permissions combined should equal the full access mask
-      const allPerms = customPermask.combinePermissions(['VIEW', 'EDIT', 'DELETE', 'SHARE', 'PRINT']);
-      expect(allPerms).toBe(31); // 1+2+4+8+16 = 31
-    });
-    
-    it('should display permission values correctly', () => {
-      const values = customPermask.getPermissionValues();
-      
-      expect(values.VIEW.value).toBe(1);
-      expect(values.VIEW.binaryValue).toBe('000001'); // 6-bit padding
-      
-      expect(values.EDIT.value).toBe(2);
-      expect(values.EDIT.binaryValue).toBe('000010');
-      
-      expect(values.FULL_ACCESS.value).toBe(63);
-      expect(values.FULL_ACCESS.binaryValue).toBe('111111');
-    });
-  });
-  
-  describe('All Permissions Methods', () => {
-    it('should create a bitmask with all permissions', () => {
-      const allPermissions = customPermask.createAllPermissions('DOCUMENTS');
-      
-      // Group 1 << 6 bits = 64, plus all permission bits (63)
-      expect(allPermissions).toBe(127);
-      
-      // Should have all individual permissions
-      expect(customPermask.hasPermission(allPermissions, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(allPermissions, 'EDIT')).toBe(true);
-      expect(customPermask.hasPermission(allPermissions, 'DELETE')).toBe(true);
-      expect(customPermask.hasPermission(allPermissions, 'SHARE')).toBe(true);
-      expect(customPermask.hasPermission(allPermissions, 'PRINT')).toBe(true);
-      
-      // Should be identified as having all permissions
-      expect(customPermask.hasAllPermissions(allPermissions)).toBe(true);
-    });
-    
-    it('should add all permissions to existing bitmask', () => {
-      const limited = customPermask.create('DOCUMENTS', ['VIEW']);
-      const upgraded = customPermask.addAllPermissions(limited);
-      
-      expect(customPermask.hasAllPermissions(upgraded)).toBe(true);
-      expect(customPermask.getGroup(upgraded)).toBe(1); // Group unchanged
-    });
-    
-    it('should correctly identify partial permissions', () => {
-      const partial = customPermask.create('DOCUMENTS', ['VIEW', 'EDIT']);
-      
-      expect(customPermask.hasAllPermissions(partial)).toBe(false);
-      expect(customPermask.hasAnyPermission(partial)).toBe(true);
-      
-      // Empty permissions bitmask
-      const empty = customPermask.create('DOCUMENTS', []);
-      expect(customPermask.hasAnyPermission(empty)).toBe(false);
-    });
-  });
-
-  describe('Simplified API', () => {
-    it('should support ALL_PERMISSIONS symbol in create method', () => {
-      // Create a permission with ALL_PERMISSIONS
-      const fullAccess = customPermask.create('DOCUMENTS', [ALL_PERMISSIONS]);
-      
-      // Should have all permissions set
-      expect(customPermask.hasPermission(fullAccess, 'VIEW')).toBe(true);
-      expect(customPermask.hasPermission(fullAccess, 'EDIT')).toBe(true);
-      expect(customPermask.hasPermission(fullAccess, 'DELETE')).toBe(true);
-      expect(customPermask.hasPermission(fullAccess, 'SHARE')).toBe(true);
-      expect(customPermask.hasPermission(fullAccess, 'PRINT')).toBe(true);
-      expect(customPermask.hasAllPermissions(fullAccess)).toBe(true);
-    });
-    
-    it('should provide predefined permission combinations', () => {
-      expect(customPermask.FULL).toBe(63); // 2^6 - 1
-      expect(customPermask.NONE).toBe(0);
-      expect(customPermask.READ_ONLY).toBe(1); // Default READ value
-      expect(customPermask.READ_WRITE).toBe(3); // READ(1) | WRITE(2) = 3
-    });
-    
-    it('should create access with createAccess helper', () => {
-      // Create full access
-      const fullAccess = customPermask.createAccess('DOCUMENTS', 'full');
-      expect(customPermask.hasAllPermissions(fullAccess)).toBe(true);
-      expect(customPermask.getGroup(fullAccess)).toBe(1);
-      
-      // Create read-only access
-      const readOnly = customPermask.createAccess('PHOTOS', 'read-only');
-      expect(customPermask.canRead(readOnly)).toBe(true);
-      expect(customPermask.canWrite(readOnly)).toBe(false);
-      expect(customPermask.getGroup(readOnly)).toBe(2);
-      
-      // Create read-write access with custom permissions
-      const custom = customPermask.createAccess('VIDEOS', 'read-write', ['SHARE']);
-      expect(customPermask.canRead(custom)).toBe(true);
-      expect(customPermask.canWrite(custom)).toBe(true);
-      expect(customPermask.hasPermission(custom, 'SHARE')).toBe(true);
-      expect(customPermask.hasPermission(custom, 'DELETE')).toBe(false);
-      expect(customPermask.getGroup(custom)).toBe(3);
-    });
-    
-    it('should use simplified grant method', () => {
-      // Read-only access
-      const readOnly = customPermask.grant({
-        group: 'DOCUMENTS',
-        read: true
-      });
-      expect(customPermask.canRead(readOnly)).toBe(true);
-      expect(customPermask.canWrite(readOnly)).toBe(false);
-      
-      // Full access
-      const fullAccess = customPermask.grant({
-        group: 'PHOTOS',
-        all: true
-      });
-      expect(customPermask.hasAllPermissions(fullAccess)).toBe(true);
-      expect(customPermask.getGroup(fullAccess)).toBe(2);
-      
-      // Custom access
-      const customAccess = customPermask.grant({
-        group: 'VIDEOS',
-        read: true,
-        write: true,
-        permissions: ['SHARE']
-      });
-      expect(customPermask.canRead(customAccess)).toBe(true);
-      expect(customPermask.canWrite(customAccess)).toBe(true);
-      expect(customPermask.hasPermission(customAccess, 'SHARE')).toBe(true);
+      expect(extendedPermask.check(reportPerm).can('APPROVE')).toBe(true);
+      expect(extendedPermask.check(reportPerm).inGroup('REPORTS')).toBe(true);
     });
   });
 });
