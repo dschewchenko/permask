@@ -402,6 +402,50 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   }
   
   /**
+   * Parse a bitmask into a simplified flat object representation
+   * @example
+   * // Returns { group: 2, read: true, write: true, delete: false }
+   * const simple = permask.parseSimple(42);
+   */
+  parseSimple(bitmask: number): Record<string, any> {
+    const group = bitmask >> this.accessBits;
+    const access = bitmask & this.accessMask;
+    const result: Record<string, any> = { group };
+    
+    // Add group name if available
+    const groupName = this.getGroupName(bitmask);
+    if (groupName) {
+      result.groupName = groupName;
+    }
+    
+    // Calculate the combined mask for all actual permissions (excluding special masks like FULL)
+    let combinedPermissionsMask = 0;
+    for (const key of Object.keys(this.permissions)) {
+      // Skip special permissions that represent combinations
+      if (key === 'FULL') continue;
+      combinedPermissionsMask |= this.permissions[key];
+    }
+    
+    // Add flattened permissions
+    for (const key of Object.keys(this.permissions)) {
+      const permValue = this.permissions[key];
+      const permKey = key.toLowerCase();
+      
+      // Special handling for FULL permission:
+      // If it represents all other permissions combined, only include it if specifically requested
+      if (key === 'FULL' && permValue === combinedPermissionsMask) {
+        // Only include FULL if it was specifically granted (compare with exact mask)
+        result[permKey] = access === permValue;
+      } else {
+        // For normal permissions, just check if the bit is set
+        result[permKey] = (access & permValue) !== 0;
+      }
+    }
+    
+    return result;
+  }
+  
+  /**
    * Convert a string-based permission description to a bitmask
    * @example
    * // Create a permission from a string description
