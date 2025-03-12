@@ -334,7 +334,7 @@ export interface CheckOptions {
 /**
  * Result of a migrated permission check
  */
-export interface MigratedCheckResult<T> {
+export interface MigratedCheckResult<T extends Record<string, number>> {
   /** Original permission value */
   originalValue: number;
   /** Migrated permission value */
