@@ -15,9 +15,8 @@ export const DefaultPermissionAccess = {
   CREATE: 1,   // 0b00001
   READ: 2,     // 0b00010
   UPDATE: 4,   // 0b00100
-  WRITE: 8,    // 0b01000
-  DELETE: 16,  // 0b10000
-  ALL: 31      // 0b11111 - All permissions combined
+  DELETE: 8,   // 0b01000
+  ALL: 15      // 0b01111 - All permissions combined
 } as const;
 
 /**
@@ -319,19 +318,12 @@ export class PermissionCheck<T extends Record<string, number>> {
   }
   
   /**
-   * Check if has standard WRITE permission
-   */
-  canWrite(): boolean {
-    return (this.access & DefaultPermissionAccess.WRITE) !== 0;
-  }
-  
-  /**
    * Check if has standard DELETE permission
    */
   canDelete(): boolean {
     return (this.access & DefaultPermissionAccess.DELETE) !== 0;
   }
-  
+    
   /**
    * Get the group value
    */
@@ -402,8 +394,8 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Start building a permission for a specific group
    * @example
-   * // Create read-write permission for DOCUMENTS group
-   * const permission = permask.for('DOCUMENTS').grant(['READ', 'WRITE']).value();
+   * // Create read-create permission for DOCUMENTS group
+   * const permission = permask.for('DOCUMENTS').grant(['READ', 'CREATE']).value();
    */
   for(group: number | string): PermissionContext<T> {
     return new PermissionContext<T>(this, group);
@@ -500,7 +492,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    * Convert a string-based permission description to a bitmask
    * @example
    * // Create a permission from a string description
-   * const permission = permask.fromString('DOCUMENTS:READ,WRITE');
+   * const permission = permask.fromString('DOCUMENTS:READ,CREATE');
    */
   fromString(permissionString: string): number {
     const [groupPart, permissionPart] = permissionString.split(':');

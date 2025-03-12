@@ -5,7 +5,7 @@ describe('Permask', () => {
   // Simple permissions for basic tests
   let basicPermask: Permask<{
     READ: number;
-    WRITE: number;
+    UPDATE: number;
     DELETE: number;
   }>;
   
@@ -22,13 +22,13 @@ describe('Permask', () => {
     // Set up basic permask using builder
     basicPermask = new PermaskBuilder<{
       READ: number;
-      WRITE: number;
+      UPDATE: number;
       DELETE: number;
     }>({
       permissions: {
         READ: DefaultPermissionAccess.READ,    // 2
-        WRITE: DefaultPermissionAccess.WRITE,  // 8
-        DELETE: DefaultPermissionAccess.DELETE // 16
+        UPDATE: DefaultPermissionAccess.UPDATE,  // 4
+        DELETE: DefaultPermissionAccess.DELETE // 8
       },
       accessBits: 5,
       groups: {
@@ -71,13 +71,13 @@ describe('Permask', () => {
   describe('Permission Creation', () => {
     it('should create basic permissions with correct bitmask values', () => {
       const readPermission = basicPermask.for('USERS').grant(['READ']).value();
-      const readWritePermission = basicPermask.for('USERS').grant(['READ', 'WRITE']).value();
+      const readUpdatePermission = basicPermask.for('USERS').grant(['READ', 'UPDATE']).value();
       
       // Group 1 (USERS) << 5 bits = 32, plus READ (2) = 34
       expect(readPermission).toBe(34);
       
-      // Group 1 (USERS) << 5 bits = 32, plus READ (2) + WRITE (8) = 42
-      expect(readWritePermission).toBe(42);
+      // Group 1 (USERS) << 5 bits = 32, plus READ (2) + UPDATE (4) = 38
+      expect(readUpdatePermission).toBe(38);
     });
     
     it('should create permissions with explicit group IDs', () => {
@@ -514,7 +514,7 @@ describe('New Permask API', () => {
   });
 });
 
-// Add new test cases for CREATE and UPDATE permissions
+// Add new test cases for CRUD permission
 describe('CRUD Permission Tests', () => {
   let crudPermask: Permask<typeof DefaultPermissionAccess>;
   
@@ -539,30 +539,27 @@ describe('CRUD Permission Tests', () => {
     expect(crudPermask.check(fullCrudPerm).canCreate()).toBe(true);
     expect(crudPermask.check(fullCrudPerm).canRead()).toBe(true);
     expect(crudPermask.check(fullCrudPerm).canUpdate()).toBe(true);
-    expect(crudPermask.check(fullCrudPerm).canWrite()).toBe(true);
     expect(crudPermask.check(fullCrudPerm).canDelete()).toBe(true);
     
     // Create + Read permissions
     expect(crudPermask.check(createReadPerm).canCreate()).toBe(true);
     expect(crudPermask.check(createReadPerm).canRead()).toBe(true);
     expect(crudPermask.check(createReadPerm).canUpdate()).toBe(false);
-    expect(crudPermask.check(createReadPerm).canWrite()).toBe(false);
     expect(crudPermask.check(createReadPerm).canDelete()).toBe(false);
     
     // Read + Update permissions
     expect(crudPermask.check(readUpdatePerm).canCreate()).toBe(false);
     expect(crudPermask.check(readUpdatePerm).canRead()).toBe(true);
     expect(crudPermask.check(readUpdatePerm).canUpdate()).toBe(true);
-    expect(crudPermask.check(readUpdatePerm).canWrite()).toBe(false);
     expect(crudPermask.check(readUpdatePerm).canDelete()).toBe(false);
   });
   
   it('should represent CRUD permissions in string format', () => {
     const createReadPerm = crudPermask.for('DOCUMENTS').grant(['CREATE', 'READ']).value();
-    const readUpdateWritePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE', 'WRITE']).value();
+    const readUpdatePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE']).value();
     
     expect(crudPermask.toString(createReadPerm)).toBe('DOCUMENTS:CREATE,READ');
-    expect(crudPermask.toString(readUpdateWritePerm)).toBe('PHOTOS:READ,UPDATE,WRITE');
+    expect(crudPermask.toString(readUpdatePerm)).toBe('PHOTOS:READ,UPDATE');
   });
 });
 
