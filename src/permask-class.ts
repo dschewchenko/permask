@@ -20,48 +20,78 @@ export const DefaultPermissionAccess = {
 } as const;
 
 /**
+ * Group metadata interface
+ */
+export interface Group {
+  id: number;
+  since?: string;
+  deprecated?: boolean;
+  deprecatedSince?: string;
+  replacedBy?: string;
+  message?: string;
+}
+
+/**
+ * Migration configuration for group permissions
+ */
+export interface GroupMigration<T> {
+  sourceGroup: string;
+  targetGroup: string;
+  permissionMapping?: Record<keyof T, keyof T>;
+}
+
+/**
  * Permission builder for creating and checking permissions
  */
 export class PermaskBuilder<T extends Record<string, number> = Record<string, number>> {
   private permissions: T & { ALL: number };
   private accessBits: number;
   private accessMask: number;
-  private groups: Record<string, number> = {};
+  private groups: Record<string, Group> = {};
   private permissionSets: Record<string, Array<keyof T>> = {};
+  private migrations: GroupMigration<T>[] = [];
   
   constructor(options: {
     permissions?: T | Record<string, number | null | undefined>;
     accessBits?: number;
     accessMask?: number;
-    groups?: Record<string, number>;
+    groups?: Record<string, number | Group>;
   } = {}) {
-    this.accessBits = options.accessBits || ACCESS_BITS;
-    
-    if (options.accessMask !== undefined) {
-      this.accessMask = options.accessMask;
-    } else if (options.accessBits !== undefined) {
-      this.accessMask = (1 << this.accessBits) - 1;
-    } else {
-      this.accessMask = ACCESS_MASK;
-    }
-    
     // Initialize with default or provided permissions
     const basePermissions = options.permissions || DefaultPermissionAccess as unknown as T;
     
-    // First check to see if any permission values exceed the current access bit limit
+    // Calculate the maximum permission value to determine required bits
     let maxPermValue = 0;
     for (const [key, value] of Object.entries(basePermissions)) {
       if (typeof value === 'number' && value > maxPermValue) {
         maxPermValue = value;
       }
     }
-
+    
     // Calculate minimum required bits for the maximum permission value
-    if (maxPermValue > this.accessMask) {
-      const minimumBits = Math.ceil(Math.log2(maxPermValue + 1));
-      throw new Error(`Permission value ${maxPermValue} exceeds maximum value ${this.accessMask} for ${this.accessBits} bits. Please use at least ${minimumBits} access bits.`);
+    const requiredBits = maxPermValue > 0 
+      ? Math.ceil(Math.log2(maxPermValue + 1)) 
+      : ACCESS_BITS; // Default if no permissions defined
+    
+    // Use provided accessBits or calculated requiredBits (whichever is larger)
+    if (options.accessBits !== undefined) {
+      if (options.accessBits < requiredBits) {
+        console.warn(`Provided accessBits (${options.accessBits}) is too small for the maximum permission value (${maxPermValue}). Using ${requiredBits} bits instead.`);
+        this.accessBits = requiredBits;
+      } else {
+        this.accessBits = options.accessBits;
+      }
+    } else {
+      this.accessBits = requiredBits;
     }
     
+    // Calculate accessMask based on determined accessBits
+    if (options.accessMask !== undefined) {
+      this.accessMask = options.accessMask;
+    } else {
+      this.accessMask = (1 << this.accessBits) - 1;
+    }
+
     // Automatically assign permission values for those without explicit values
     const processedPermissions: Record<string, number> = {};
     let nextValue = 1; // Start with 1 (0b1)
@@ -109,7 +139,19 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
     }
     
     this.permissions = processedPermissions as T & { ALL: number };
-    this.groups = options.groups || {};
+    
+    // Process groups, converting simple values to Group objects if needed
+    if (options.groups) {
+      for (const [key, value] of Object.entries(options.groups)) {
+        if (typeof value === 'number') {
+          // Convert simple number to Group object
+          this.groups[key] = { id: value };
+        } else if (typeof value === 'object') {
+          // Use provided Group object
+          this.groups[key] = value;
+        }
+      }
+    }
     
     // Validate permissions fit within specified bits
     for (const [key, value] of Object.entries(this.permissions)) {
@@ -136,8 +178,56 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
   /**
    * Define a new group
    */
-  defineGroup(name: string, value: number): this {
-    this.groups[name] = value;
+  defineGroup(name: string, id: number, options: Omit<Group, 'id'> = {}): this {
+    this.groups[name] = { id, ...options };
+    return this;
+  }
+  
+  /**
+   * Mark a group as deprecated
+   */
+  deprecateGroup(name: string, options: {
+    replacedBy?: string;
+    version?: string;
+    message?: string;
+  } = {}): this {
+    if (!this.groups[name]) {
+      throw new Error(`Cannot deprecate non-existent group '${name}'`);
+    }
+    
+    this.groups[name] = {
+      ...this.groups[name],
+      deprecated: true,
+      deprecatedSince: options.version,
+      replacedBy: options.replacedBy,
+      message: options.message || `Group '${name}' is deprecated${options.replacedBy ? `, use '${options.replacedBy}' instead` : ''}`
+    };
+    
+    return this;
+  }
+  
+  /**
+   * Define a migration from one group to another
+   */
+  defineGroupMigration(
+    sourceGroup: string, 
+    targetGroup: string,
+    permissionMapping: Record<keyof T, keyof T> = {} as Record<keyof T, keyof T>
+  ): this {
+    if (!this.groups[sourceGroup]) {
+      throw new Error(`Source group '${sourceGroup}' does not exist`);
+    }
+    
+    if (!this.groups[targetGroup]) {
+      throw new Error(`Target group '${targetGroup}' does not exist`);
+    }
+    
+    this.migrations.push({
+      sourceGroup,
+      targetGroup,
+      permissionMapping
+    });
+    
     return this;
   }
   
@@ -158,7 +248,8 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
       accessBits: this.accessBits,
       accessMask: this.accessMask,
       groups: this.groups,
-      permissionSets: this.permissionSets as Record<string, Array<keyof T>>
+      permissionSets: this.permissionSets as Record<string, Array<keyof T>>,
+      migrations: this.migrations
     });
   }
 }
@@ -174,7 +265,7 @@ export class PermissionContext<T extends Record<string, number>> {
     group: number | string
   ) {
     const groupValue = typeof group === 'string' 
-      ? permask.getGroupByName(group) || 0 
+      ? permask.getGroupByName(group)?.id || 0 
       : group;
       
     this.bitmask = groupValue << permask.accessBits;
@@ -228,6 +319,30 @@ export class PermissionContext<T extends Record<string, number>> {
   value(): number {
     return this.bitmask;
   }
+}
+
+/**
+ * Optional configuration for permission checks
+ */
+export interface CheckOptions {
+  /** Automatically migrate deprecated groups */
+  autoMigrate?: boolean;
+  /** Log warnings for deprecated groups */
+  warnOnDeprecated?: boolean;
+}
+
+/**
+ * Result of a migrated permission check
+ */
+export interface MigratedCheckResult<T> {
+  /** Original permission value */
+  originalValue: number;
+  /** Migrated permission value */
+  migratedValue: number;
+  /** Whether the permission was migrated */
+  wasMigrated: boolean;
+  /** The result of the check on the migrated value */
+  check: PermissionCheck<T>;
 }
 
 /**
@@ -355,6 +470,29 @@ export class PermissionCheck<T extends Record<string, number>> {
   } {
     return this.permask.parse(this.bitmask);
   }
+
+  /**
+   * Check if the group is deprecated
+   */
+  isInDeprecatedGroup(): boolean {
+    const groupName = this.groupName();
+    return groupName ? this.permask.isGroupDeprecated(groupName) : false;
+  }
+  
+  /**
+   * Get deprecation details if the group is deprecated
+   */
+  getGroupDeprecationInfo(): {
+    deprecated: boolean;
+    message?: string;
+    replacedBy?: string;
+    deprecatedSince?: string;
+  } | null {
+    const groupName = this.groupName();
+    if (!groupName) return null;
+    
+    return this.permask.getGroupDeprecationInfo(groupName);
+  }
 }
 
 /**
@@ -370,21 +508,24 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   readonly accessBits: number;
   
   private permissions: T;
-  private groups: Record<string, number>;
+  private groups: Record<string, Group>;
   private permissionSets: Record<string, Array<keyof T>>;
+  private migrations: GroupMigration<T>[];
   
   constructor(options: {
     permissions: T;
     accessBits: number;
     accessMask: number;
-    groups: Record<string, number>;
+    groups: Record<string, Group>;
     permissionSets: Record<string, Array<keyof T>>;
+    migrations?: GroupMigration<T>[];
   }) {
     this.permissions = options.permissions;
     this.accessBits = options.accessBits;
     this.accessMask = options.accessMask;
     this.groups = options.groups;
     this.permissionSets = options.permissionSets;
+    this.migrations = options.migrations || [];
     
     // Initialize presets
     this.FULL_ACCESS = this.accessMask;
@@ -409,7 +550,22 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    *   // Allow reading
    * }
    */
-  check(bitmask: number): PermissionCheck<T> {
+  check(bitmask: number, options: CheckOptions = {}): PermissionCheck<T> {
+    if (options.autoMigrate) {
+      const result = this.migrateIfDeprecated(bitmask);
+      return result.check;
+    }
+    
+    if (options.warnOnDeprecated) {
+      const check = new PermissionCheck<T>(this, bitmask);
+      if (check.isInDeprecatedGroup()) {
+        const info = check.getGroupDeprecationInfo();
+        if (info && info.message) {
+          console.warn(info.message);
+        }
+      }
+    }
+    
     return new PermissionCheck<T>(this, bitmask);
   }
   
@@ -430,7 +586,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Get a group value by name
    */
-  getGroupByName(name: string): number | undefined {
+  getGroupByName(name: string): Group | undefined {
     return this.groups[name];
   }
   
@@ -439,7 +595,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    */
   getGroupName(bitmask: number): string | undefined {
     const groupValue = bitmask >> this.accessBits;
-    const entry = Object.entries(this.groups).find(([, value]) => value === groupValue);
+    const entry = Object.entries(this.groups).find(([, value]) => value.id === groupValue);
     return entry?.[0];
   }
   
@@ -447,7 +603,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    * Check if a bitmask belongs to a specific group
    */
   hasGroup(bitmask: number, group: number | string): boolean {
-    const groupValue = typeof group === 'string' ? this.groups[group] || 0 : group;
+    const groupValue = typeof group === 'string' ? this.groups[group]?.id || 0 : group;
     return (bitmask >> this.accessBits) === groupValue;
   }
   
@@ -499,7 +655,7 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     
     if (!groupPart) return 0;
     
-    const group = this.groups[groupPart] !== undefined ? this.groups[groupPart] : Number(groupPart) || 0;
+    const group = this.groups[groupPart]?.id !== undefined ? this.groups[groupPart].id : Number(groupPart) || 0;
     
     if (!permissionPart) {
       return group << this.accessBits;
@@ -559,14 +715,110 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   }
   
   /**
+   * Migrate permission if it belongs to a deprecated group
+   */
+  migrateIfDeprecated(bitmask: number): MigratedCheckResult<T> {
+    const check = new PermissionCheck<T>(this, bitmask);
+    const groupName = check.groupName();
+    
+    if (!groupName || !this.isGroupDeprecated(groupName)) {
+      return {
+        originalValue: bitmask,
+        migratedValue: bitmask,
+        wasMigrated: false,
+        check
+      };
+    }
+    
+    // Find migration for this group
+    const groupInfo = this.groups[groupName];
+    const targetGroupName = groupInfo.replacedBy;
+    
+    if (!targetGroupName) {
+      return {
+        originalValue: bitmask,
+        migratedValue: bitmask,
+        wasMigrated: false,
+        check
+      };
+    }
+    
+    // Find migration config
+    const migration = this.migrations.find(m => 
+      m.sourceGroup === groupName && m.targetGroup === targetGroupName);
+      
+    // Get permission bits
+    const permBits = bitmask & this.accessMask;
+    let newPermBits = permBits;
+    
+    // Apply permission mappings if available
+    if (migration && migration.permissionMapping) {
+      newPermBits = 0;
+      
+      // Apply each permission mapping
+      for (const [sourceKey, targetKey] of Object.entries(migration.permissionMapping)) {
+        const sourcePerm = this.permissions[sourceKey as keyof T] || 0;
+        const targetPerm = this.permissions[targetKey as keyof T] || 0;
+        
+        if ((permBits & sourcePerm) !== 0) {
+          newPermBits |= targetPerm;
+        }
+      }
+    }
+    
+    // Create new permission with target group
+    const targetGroupId = this.getGroupByName(targetGroupName)?.id || 0;
+    const migratedValue = (targetGroupId << this.accessBits) | newPermBits;
+    
+    return {
+      originalValue: bitmask,
+      migratedValue,
+      wasMigrated: true,
+      check: new PermissionCheck<T>(this, migratedValue)
+    };
+  }
+  
+  /**
+   * Check if a group is marked as deprecated
+   */
+  isGroupDeprecated(groupName: string): boolean {
+    return this.groups[groupName]?.deprecated === true;
+  }
+  
+  /**
+   * Get deprecation information for a group
+   */
+  getGroupDeprecationInfo(groupName: string): {
+    deprecated: boolean;
+    message?: string;
+    replacedBy?: string;
+    deprecatedSince?: string;
+  } | null {
+    const group = this.groups[groupName];
+    if (!group) return null;
+    
+    return {
+      deprecated: group.deprecated || false,
+      message: group.message,
+      replacedBy: group.replacedBy,
+      deprecatedSince: group.deprecatedSince
+    };
+  }
+  
+  /**
    * Create a new builder with the current configuration
    */
   toBuilder(): PermaskBuilder<T> {
+    const groupsAsRaw = Object.entries(this.groups).reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, Group>);
+    
     return new PermaskBuilder<T>({
       permissions: this.permissions,
       accessBits: this.accessBits,
       accessMask: this.accessMask,
-      groups: { ...this.groups }
+      groups: groupsAsRaw
     });
   }
 }
