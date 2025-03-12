@@ -37,7 +37,7 @@ export interface Group {
 export interface GroupMigration<T> {
   sourceGroup: string;
   targetGroup: string;
-  permissionMapping?: Record<keyof T, keyof T>;
+  permissionMapping?: Partial<Record<keyof T, keyof T>>;
 }
 
 /**
@@ -212,7 +212,7 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
   defineGroupMigration(
     sourceGroup: string, 
     targetGroup: string,
-    permissionMapping: Record<keyof T, keyof T> = {} as Record<keyof T, keyof T>
+    permissionMapping: Partial<Record<keyof T, keyof T>> = {}
   ): this {
     if (!this.groups[sourceGroup]) {
       throw new Error(`Source group '${sourceGroup}' does not exist`);
@@ -225,7 +225,7 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
     this.migrations.push({
       sourceGroup,
       targetGroup,
-      permissionMapping
+      permissionMapping: permissionMapping as Record<keyof T, keyof T>
     });
     
     return this;
