@@ -1,7 +1,7 @@
-import { Permark } from 'permask';
+import { Permask } from 'permask';
 
 // Example 1: Using default permissions (READ, WRITE, DELETE)
-const defaultPermissions = new Permark();
+const defaultPermissions = new Permask();
 
 // Create a permission bitmask for group 1 with read and write access
 const userPermission = defaultPermissions.createStandardBitmask({
@@ -16,7 +16,7 @@ console.log('Can Write:', defaultPermissions.canWrite(userPermission)); // true
 console.log('Can Delete:', defaultPermissions.canDelete(userPermission)); // false
 
 // Example 2: Custom permissions with named groups
-const customPermissions = new Permark({
+const customPermissions = new Permask({
   permissions: {
     VIEW: 1,        // 0b001
     EDIT: 2,        // 0b010
@@ -68,8 +68,8 @@ customPermissions.registerGroup('SECURE_DOCS', 101);
 const secureDocPermission = customPermissions.create('SECURE_DOCS', ['VIEW', 'EDIT', 'ENCRYPT']);
 console.log('Secure Doc Permission:', customPermissions.parse(secureDocPermission));
 
-// Example 3: Using the Permark class with different bits configuration
-const tinyPermissions = new Permark({
+// Example 3: Using the Permask class with different bits configuration
+const tinyPermissions = new Permask({
   permissions: {
     READ_ONLY: 1,  // 0b01
     FULL: 3        // 0b11
