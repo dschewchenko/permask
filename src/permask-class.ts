@@ -104,13 +104,13 @@ export class PermaskBuilder<T extends Record<string, number> = Record<string, nu
   /**
    * Build and return a Permask instance
    */
-  build(): Permask<T & { ALL: number }> {
-    return new Permask<T & { ALL: number }>({
-      permissions: this.permissions,
+  build(): Permask<T> {
+    return new Permask<T>({
+      permissions: this.permissions as unknown as T,
       accessBits: this.accessBits,
       accessMask: this.accessMask,
       groups: this.groups,
-      permissionSets: this.permissionSets
+      permissionSets: this.permissionSets as Record<string, Array<keyof T>>
     });
   }
 }
@@ -138,6 +138,13 @@ export class PermissionContext<T extends Record<string, number>> {
   grant(permissions: Array<keyof T>): this {
     for (const permission of permissions) {
       const permValue = this.permask.getPermissionValue(permission);
+      
+      // Special handling for ALL permission - grant all bits
+      if (permission === 'ALL' as keyof T) {
+        this.grantAll();
+        continue;
+      }
+      
       if (permValue) {
         const currentAccess = this.bitmask & this.permask.accessMask;
         const newAccess = currentAccess | permValue;
@@ -195,7 +202,6 @@ export class PermissionCheck<T extends Record<string, number>> {
     // Special handling for the ALL permission
     if (permission === 'ALL' as keyof T) {
       // For ALL permission, we need to check if all bits are set
-      // Compare against the accessMask directly, not against the ALL value
       return this.canEverything();
     }
     
@@ -369,8 +375,8 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
   /**
    * Get a permission value by key
    */
-  getPermissionValue(permission: keyof T): number {
-    return this.permissions[permission as string] || 0;
+  getPermissionValue(permission: keyof T | 'ALL'): number {
+    return (this.permissions as any)[permission] || 0;
   }
   
   /**
