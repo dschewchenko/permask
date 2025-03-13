@@ -463,14 +463,6 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
     const access = bitmask & this.accessMask;
     const permissions = {} as Partial<Record<keyof T, boolean>>;
     
-    // Calculate the combined mask for all actual permissions (excluding ALL)
-    let combinedPermissionsMask = 0;
-    for (const key of Object.keys(this.permissions)) {
-      if (key !== 'ALL') {
-        combinedPermissionsMask |= this.permissions[key];
-      }
-    }
-    
     for (const key of Object.keys(this.permissions)) {
       if (key === 'ALL') {
         // ALL permission should be true only if all bits in the accessMask are set
