@@ -1,5 +1,5 @@
 /**
- * Default number of bits allocated for permissions (5 bits)
+ * Default number of bits allocated for permissions (4 bits)
  */
 const ACCESS_BITS = 4;
 
@@ -221,7 +221,7 @@ export class PermissionContext<T extends Record<string, number>> {
     this.bitmask = (this.bitmask & ~this.permask.accessMask) | this.permask.accessMask;
     return this;
   }
-  
+    
   /**
    * Get the resulting permission bitmask
    */
