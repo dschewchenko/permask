@@ -70,8 +70,8 @@ describe('Permask', () => {
   
   describe('Permission Creation', () => {
     it('should create basic permissions with correct bitmask values', () => {
-      const readPermission = basicPermask.for('USERS').grant(['READ']).value();
-      const readUpdatePermission = basicPermask.for('USERS').grant(['READ', 'UPDATE']).value();
+      const readPermission = basicPermask.forGroup('USERS').grant(['READ']).value();
+      const readUpdatePermission = basicPermask.forGroup('USERS').grant(['READ', 'UPDATE']).value();
       
       // Group 1 (USERS) << 4 bits = 16, plus READ (2) = 18
       expect(readPermission).toBe(18);
@@ -81,7 +81,7 @@ describe('Permask', () => {
     });
     
     it('should create permissions with explicit group IDs', () => {
-      const permission = richPermask.for(2).grant(['VIEW', 'EDIT']).value();
+      const permission = richPermask.forGroup(2).grant(['VIEW', 'EDIT']).value();
       
       // Group 2 (PHOTOS) << 6 bits = 128, plus VIEW (1) + EDIT (2) = 131
       expect(permission).toBe(131);
@@ -90,8 +90,8 @@ describe('Permask', () => {
     });
     
     it('should handle ALL_PERMISSIONS symbol', () => {
-      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
-      const alternateWay = richPermask.for('DOCUMENTS').grantAll().value();
+      const allPermissions = richPermask.forGroup('DOCUMENTS').grantAll().value();
+      const alternateWay = richPermask.forGroup('DOCUMENTS').grantAll().value();
       
       // All permissions should set all bits (63 for 6 bits)
       expect(richPermask.check(allPermissions).canEverything()).toBe(true);
@@ -100,8 +100,8 @@ describe('Permask', () => {
     });
     
     it('should handle permission sets', () => {
-      const editorPerm = richPermask.for('DOCUMENTS').grantSet('EDITOR').value();
-      const managerPerm = richPermask.for('PHOTOS').grantSet('MANAGER').value();
+      const editorPerm = richPermask.forGroup('DOCUMENTS').grantSet('EDITOR').value();
+      const managerPerm = richPermask.forGroup('PHOTOS').grantSet('MANAGER').value();
       
       // Editor has VIEW and EDIT
       expect(richPermask.check(editorPerm).can('VIEW')).toBe(true);
@@ -117,7 +117,7 @@ describe('Permask', () => {
     
     it('should combine permission sets and individual permissions', () => {
       // Grant editor set plus SHARE permission
-      const customPerm = richPermask.for('VIDEOS')
+      const customPerm = richPermask.forGroup('VIDEOS')
         .grantSet('EDITOR')
         .grant(['SHARE'])
         .value();
@@ -130,7 +130,7 @@ describe('Permask', () => {
     });
 
     it('should handle granting all permissions', () => {
-      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
+      const allPermissions = richPermask.forGroup('DOCUMENTS').grantAll().value();
       
       // All permissions should set all bits
       expect(richPermask.check(allPermissions).canEverything()).toBe(true);
@@ -139,8 +139,8 @@ describe('Permask', () => {
 
     it('should handle granting all permissions via grantAll()', () => {
       // Changed from using ALL_PERMISSIONS to directly using grantAll()
-      const allPermissions = richPermask.for('DOCUMENTS').grantAll().value();
-      const alternateWay = richPermask.for('DOCUMENTS').grantAll().value();
+      const allPermissions = richPermask.forGroup('DOCUMENTS').grantAll().value();
+      const alternateWay = richPermask.forGroup('DOCUMENTS').grantAll().value();
       
       // All permissions should set all bits (63 for 6 bits)
       expect(richPermask.check(allPermissions).canEverything()).toBe(true);
@@ -151,7 +151,7 @@ describe('Permask', () => {
   
   describe('Permission Checking', () => {
     it('should check individual permissions', () => {
-      const perm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm = richPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
       
       expect(richPermask.check(perm).can('VIEW')).toBe(true);
       expect(richPermask.check(perm).can('EDIT')).toBe(true);
@@ -159,7 +159,7 @@ describe('Permask', () => {
     });
     
     it('should check multiple permissions at once', () => {
-      const perm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT', 'SHARE']).value();
+      const perm = richPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT', 'SHARE']).value();
       
       // All permissions check
       expect(richPermask.check(perm).canAll(['VIEW', 'EDIT'])).toBe(true);
@@ -171,15 +171,15 @@ describe('Permask', () => {
     });
     
     it('should check for complete permissions', () => {
-      const partialPerm = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
-      const allPerm = richPermask.for('DOCUMENTS').grantAll().value();
+      const partialPerm = richPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const allPerm = richPermask.forGroup('DOCUMENTS').grantAll().value();
       
       expect(richPermask.check(partialPerm).canEverything()).toBe(false);
       expect(richPermask.check(allPerm).canEverything()).toBe(true);
     });
     
     it('should provide detailed permission explanation', () => {
-      const perm = richPermask.for('PHOTOS').grant(['VIEW', 'SHARE']).value();
+      const perm = richPermask.forGroup('PHOTOS').grant(['VIEW', 'SHARE']).value();
       
       const details = richPermask.check(perm).explain();
       
@@ -198,7 +198,7 @@ describe('Permask', () => {
     });
     
     it('should check group membership', () => {
-      const perm = richPermask.for('DOCUMENTS').grant(['VIEW']).value();
+      const perm = richPermask.forGroup('DOCUMENTS').grant(['VIEW']).value();
       
       expect(richPermask.check(perm).inGroup('DOCUMENTS')).toBe(true);
       expect(richPermask.check(perm).inGroup('PHOTOS')).toBe(false);
@@ -208,9 +208,9 @@ describe('Permask', () => {
   
   describe('String Representation', () => {
     it('should convert permissions to strings', () => {
-      const perm1 = richPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
-      const perm2 = richPermask.for('PHOTOS').grantAll().value();
-      const perm3 = richPermask.for('VIDEOS').grant([]).value();
+      const perm1 = richPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm2 = richPermask.forGroup('PHOTOS').grantAll().value();
+      const perm3 = richPermask.forGroup('VIDEOS').grant([]).value();
       
       expect(richPermask.toString(perm1)).toBe('DOCUMENTS:VIEW,EDIT');
       expect(richPermask.toString(perm2)).toBe('PHOTOS:ALL');
@@ -257,7 +257,7 @@ describe('Permask', () => {
         .build();
       
       // Create permission using new components
-      const reportPerm = extendedPermask.for('REPORTS').grantSet('APPROVER').value();
+      const reportPerm = extendedPermask.forGroup('REPORTS').grantSet('APPROVER').value();
       
       expect(extendedPermask.check(reportPerm).can('VIEW')).toBe(true);
       expect(extendedPermask.check(reportPerm).can('APPROVE')).toBe(true);
@@ -276,14 +276,14 @@ describe('Permask', () => {
   
   describe('Edge Cases', () => {
     it('should handle group 0 correctly', () => {
-      const perm = richPermask.for(0).grant(['VIEW']).value();
+      const perm = richPermask.forGroup(0).grant(['VIEW']).value();
       
       expect(richPermask.check(perm).group()).toBe(0);
       expect(richPermask.check(perm).can('VIEW')).toBe(true);
     });
     
     it('should handle non-existent groups gracefully', () => {
-      const perm = richPermask.for('NON_EXISTENT').grant(['VIEW']).value();
+      const perm = richPermask.forGroup('NON_EXISTENT').grant(['VIEW']).value();
       
       expect(richPermask.check(perm).group()).toBe(0); // Default to group 0
       expect(richPermask.check(perm).can('VIEW')).toBe(true);
@@ -291,14 +291,14 @@ describe('Permask', () => {
     
     it('should handle non-existent permissions gracefully', () => {
       // @ts-ignore - Intentionally testing with a non-existent permission
-      const perm = richPermask.for('DOCUMENTS').grant(['NON_EXISTENT']).value();
+      const perm = richPermask.forGroup('DOCUMENTS').grant(['NON_EXISTENT']).value();
       
       expect(richPermask.check(perm).group()).toBe(1); // Group should be set
       expect(richPermask.check(perm).can('VIEW')).toBe(false); // No permissions granted
     });
     
     it('should handle empty permission lists', () => {
-      const perm = richPermask.for('DOCUMENTS').grant([]).value();
+      const perm = richPermask.forGroup('DOCUMENTS').grant([]).value();
       
       expect(richPermask.check(perm).group()).toBe(1);
       expect(richPermask.check(perm).can('VIEW')).toBe(false);
@@ -308,10 +308,10 @@ describe('Permask', () => {
   
   describe('Permission Sets', () => {
     it('should use predefined permission sets', () => {
-      const viewerPerm = richPermask.for('DOCUMENTS').grantSet('VIEWER').value();
-      const editorPerm = richPermask.for('DOCUMENTS').grantSet('EDITOR').value();
-      const managerPerm = richPermask.for('DOCUMENTS').grantSet('MANAGER').value();
-      const adminPerm = richPermask.for('DOCUMENTS').grantSet('ADMIN').value();
+      const viewerPerm = richPermask.forGroup('DOCUMENTS').grantSet('VIEWER').value();
+      const editorPerm = richPermask.forGroup('DOCUMENTS').grantSet('EDITOR').value();
+      const managerPerm = richPermask.forGroup('DOCUMENTS').grantSet('MANAGER').value();
+      const adminPerm = richPermask.forGroup('DOCUMENTS').grantSet('ADMIN').value();
       
       // Check viewer permissions
       expect(richPermask.check(viewerPerm).can('VIEW')).toBe(true);
@@ -331,7 +331,7 @@ describe('Permask', () => {
     
     it('should combine sets with additional permissions', () => {
       // Grant manager set plus SHARE permission
-      const customPerm = richPermask.for('DOCUMENTS')
+      const customPerm = richPermask.forGroup('DOCUMENTS')
         .grantSet('MANAGER')
         .grant(['SHARE'])
         .value();
@@ -384,7 +384,7 @@ describe('New Permask API', () => {
   describe('Building Permissions', () => {
     it('should create permissions using the fluent API', () => {
       // Grant specific permissions
-      const viewEditPerm = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const viewEditPerm = permask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
       
       expect(permask.check(viewEditPerm).can('VIEW')).toBe(true);
       expect(permask.check(viewEditPerm).can('EDIT')).toBe(true);
@@ -394,7 +394,7 @@ describe('New Permask API', () => {
     
     it('should support permission sets', () => {
       // Grant a permission set
-      const managerPerm = permask.for('PHOTOS').grantSet('MANAGER').value();
+      const managerPerm = permask.forGroup('PHOTOS').grantSet('MANAGER').value();
       
       expect(permask.check(managerPerm).can('VIEW')).toBe(true);
       expect(permask.check(managerPerm).can('EDIT')).toBe(true);
@@ -405,11 +405,11 @@ describe('New Permask API', () => {
     
     it('should handle ALL_PERMISSIONS', () => {
       // Grant all permissions
-      const allPerm = permask.for('VIDEOS').grantAll().value();
+      const allPerm = permask.forGroup('VIDEOS').grantAll().value();
       
       expect(permask.check(allPerm).canEverything()).toBe(true);
       expect(permask.check(allPerm).can('VIEW')).toBe(true);
-      expect(permask.check(allPerm).can('EDIT')).toBe(true);
+      expect(permask.check(allPerm).can('EDIT')). toBe(true);
       expect(permask.check(allPerm).can('DELETE')).toBe(true);
       expect(permask.check(allPerm).can('SHARE')).toBe(true);
       expect(permask.check(allPerm).can('PRINT')).toBe(true);
@@ -417,7 +417,7 @@ describe('New Permask API', () => {
 
     it('should handle granting all permissions', () => {
       // Changed from ALL_PERMISSIONS to grantAll()
-      const allPerm = permask.for('VIDEOS').grantAll().value();
+      const allPerm = permask.forGroup('VIDEOS').grantAll().value();
       
       expect(permask.check(allPerm).canEverything()).toBe(true);
       expect(permask.check(allPerm).can('VIEW')).toBe(true);
@@ -430,7 +430,7 @@ describe('New Permask API', () => {
   
   describe('Checking Permissions', () => {
     it('should check permissions with the fluent API', () => {
-      const perm = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm = permask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
       
       // Individual checks
       expect(permask.check(perm).can('VIEW')).toBe(true);
@@ -450,7 +450,7 @@ describe('New Permask API', () => {
     });
     
     it('should provide detailed explanation of permissions', () => {
-      const perm = permask.for('PHOTOS').grant(['VIEW', 'EDIT']).value();
+      const perm = permask.forGroup('PHOTOS').grant(['VIEW', 'EDIT']).value();
       
       const details = permask.check(perm).explain();
       
@@ -471,9 +471,9 @@ describe('New Permask API', () => {
   
   describe('String Conversion', () => {
     it('should convert permissions to strings', () => {
-      const perm1 = permask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
-      const perm2 = permask.for('PHOTOS').grantAll().value();
-      const perm3 = permask.for('VIDEOS').grant([]).value();
+      const perm1 = permask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+      const perm2 = permask.forGroup('PHOTOS').grantAll().value();
+      const perm3 = permask.forGroup('VIDEOS').grant([]).value();
       
       expect(permask.toString(perm1)).toBe('DOCUMENTS:VIEW,EDIT');
       expect(permask.toString(perm2)).toBe('PHOTOS:ALL');
@@ -506,7 +506,7 @@ describe('New Permask API', () => {
         .defineGroup('REPORTS', 4)
         .build();
       
-      const reportPerm = extendedPermask.for('REPORTS').grant(['VIEW', 'APPROVE']).value();
+      const reportPerm = extendedPermask.forGroup('REPORTS').grant(['VIEW', 'APPROVE']).value();
       
       expect(extendedPermask.check(reportPerm).can('APPROVE')).toBe(true);
       expect(extendedPermask.check(reportPerm).inGroup('REPORTS')).toBe(true);
@@ -531,9 +531,9 @@ describe('CRUD Permission Tests', () => {
   });
   
   it('should handle all CRUD permissions correctly', () => {
-    const fullCrudPerm = crudPermask.for('DOCUMENTS').grantAll().value();
-    const createReadPerm = crudPermask.for('DOCUMENTS').grant(['CREATE', 'READ']).value();
-    const readUpdatePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE']).value();
+    const fullCrudPerm = crudPermask.forGroup('DOCUMENTS').grantAll().value();
+    const createReadPerm = crudPermask.forGroup('DOCUMENTS').grant(['CREATE', 'READ']).value();
+    const readUpdatePerm = crudPermask.forGroup('PHOTOS').grant(['READ', 'UPDATE']).value();
     
     // Full CRUD permissions
     expect(crudPermask.check(fullCrudPerm).canCreate()).toBe(true);
@@ -555,8 +555,8 @@ describe('CRUD Permission Tests', () => {
   });
   
   it('should represent CRUD permissions in string format', () => {
-    const createReadPerm = crudPermask.for('DOCUMENTS').grant(['CREATE', 'READ']).value();
-    const readUpdatePerm = crudPermask.for('PHOTOS').grant(['READ', 'UPDATE']).value();
+    const createReadPerm = crudPermask.forGroup('DOCUMENTS').grant(['CREATE', 'READ']).value();
+    const readUpdatePerm = crudPermask.forGroup('PHOTOS').grant(['READ', 'UPDATE']).value();
     
     expect(crudPermask.toString(createReadPerm)).toBe('DOCUMENTS:CREATE,READ');
     expect(crudPermask.toString(readUpdatePerm)).toBe('PHOTOS:READ,UPDATE');
@@ -601,13 +601,13 @@ describe('ALL Permission Tests', () => {
   
   it('should handle the ALL permission correctly', () => {
     // Grant individual permissions
-    const partialPerm = allPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+    const partialPerm = allPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
     
     // Grant all permissions
-    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    const fullPerm = allPermask.forGroup('DOCUMENTS').grantAll().value();
     
     // Grant using the ALL permission directly
-    const allPerm = allPermask.for('PHOTOS').grant(['ALL']).value();
+    const allPerm = allPermask.forGroup('PHOTOS').grant(['ALL']).value();
     
     // Test partial permissions
     expect(allPermask.check(partialPerm).can('VIEW')).toBe(true);
@@ -637,7 +637,7 @@ describe('ALL Permission Tests', () => {
   
   it('should include ALL in permission explanation', () => {
     // Partial permissions
-    const partialPerm = allPermask.for('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
+    const partialPerm = allPermask.forGroup('DOCUMENTS').grant(['VIEW', 'EDIT']).value();
     const details = allPermask.check(partialPerm).explain();
     
     expect(details).toEqual({
@@ -654,7 +654,7 @@ describe('ALL Permission Tests', () => {
     });
     
     // Full permissions
-    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    const fullPerm = allPermask.forGroup('DOCUMENTS').grantAll().value();
     const fullDetails = allPermask.check(fullPerm).explain();
     
     expect(fullDetails).toEqual({
@@ -672,7 +672,7 @@ describe('ALL Permission Tests', () => {
   });
   
   it('should handle string conversion with ALL', () => {
-    const fullPerm = allPermask.for('DOCUMENTS').grantAll().value();
+    const fullPerm = allPermask.forGroup('DOCUMENTS').grantAll().value();
     expect(allPermask.toString(fullPerm)).toBe('DOCUMENTS:ALL');
     
     const fromString = allPermask.fromString('PHOTOS:ALL');
@@ -718,7 +718,7 @@ describe('Auto Permission Value Assignment', () => {
     expect(autoPermask.getPermissionValue('ALL')).toBe(15); // 0b01111
     
     // Test that permissions work correctly
-    const perm = autoPermask.for('DOCUMENTS').grant(['VIEW', 'SHARE']).value();
+    const perm = autoPermask.forGroup('DOCUMENTS').grant(['VIEW', 'SHARE']).value();
     expect(autoPermask.check(perm).can('VIEW')).toBe(true);
     expect(autoPermask.check(perm).can('SHARE')).toBe(true);
     expect(autoPermask.check(perm).can('EDIT')).toBe(false);
@@ -781,7 +781,7 @@ describe('Auto Permission Value Assignment', () => {
     expect(permask.getPermissionValue('ALL')).toBe(21);
     
     // Test granting all permissions
-    const allPerm = permask.for(1).grantAll().value();
+    const allPerm = permask.forGroup(1).grantAll().value();
     
     // The access mask should be 31 (all 5 bits set)
     expect(allPerm & 31).toBe(31);
@@ -809,13 +809,13 @@ describe('Auto Permission Value Assignment', () => {
     expect(permask.getPermissionValue('ALL')).toBe(15);
     
     // Test granting with ALL permission
-    const allPerm = permask.for(1).grant(['ALL']).value();
+    const allPerm = permask.forGroup(1).grant(['ALL']).value();
     
     // Should set all bits according to accessMask (31)
     expect(allPerm & 31).toBe(31);
     
     // Test granting all permissions directly
-    const fullPerm = permask.for(1).grantAll().value();
+    const fullPerm = permask.forGroup(1).grantAll().value();
     expect(fullPerm & 31).toBe(31);
   });
   

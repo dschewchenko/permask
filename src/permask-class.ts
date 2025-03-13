@@ -171,7 +171,7 @@ export class PermissionContext<T extends Record<string, number>> {
   
   constructor(
     private permask: Permask<T>,
-    group: number | string
+    group: number | string 
   ) {
     const groupValue = typeof group === 'string' 
       ? permask.getGroupByName(group) || 0 
@@ -395,10 +395,10 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
    * Start building a permission for a specific group
    * @example
    * // Create read-create permission for DOCUMENTS group
-   * const permission = permask.for('DOCUMENTS').grant(['READ', 'CREATE']).value();
+   * const permission = permask.forGroup('DOCUMENTS').grant(['READ', 'CREATE']).value();
    */
-  for(group: number | string): PermissionContext<T> {
-    return new PermissionContext<T>(this, group);
+  forGroup<G extends number | keyof typeof this.groups>(group: G): PermissionContext<T> {
+    return new PermissionContext<T>(this, group as number | string);
   }
   
   /**
@@ -560,5 +560,12 @@ export class Permask<T extends Record<string, number> = Record<string, number>> 
       accessMask: this.accessMask,
       groups: { ...this.groups }
     });
+  }
+  
+  /**
+   * Get all defined group names
+   */
+  getGroupNames(): string[] {
+    return Object.keys(this.groups);
   }
 }
