@@ -548,21 +548,31 @@ export class Permask<T extends Record<string, number> = Record<string, number>, 
       return `${groupName}:ALL`
     }
 
-    const permissionNames = Object.entries(parsed.permissions)
-      .filter(([name, enabled]) => {
-        // Filter out ALL to avoid confusion with individual permissions
-        if (name === 'ALL') {
-          return false
-        }
-        return enabled
-      })
-      .map(([name]) => name)
-
-    if (permissionNames.length === 0) {
+    // Get the access bits only
+    const accessBits = bitmask & this.accessMask
+    
+    // If no access bits are set, return NONE
+    if (accessBits === 0) {
       return `${groupName}:NONE`
     }
 
-    return `${groupName}:${permissionNames.join(',')}`
+    // Only include basic permissions (single bit values, not combinations)
+    const basicPermissions = Object.entries(this.permissions)
+      .filter(([name, value]) => {
+        // Filter out combination permissions (those with underscore) and ALL/NONE
+        return name !== 'ALL' && 
+               name !== 'NONE' && 
+               !name.includes('_') && 
+               (accessBits & value) === value
+      })
+      .map(([name]) => name)
+
+    // If no basic permissions were found (shouldn't happen if accessBits > 0)
+    if (basicPermissions.length === 0) {
+      return `${groupName}:CUSTOM`
+    }
+
+    return `${groupName}:${basicPermissions.join(',')}`
   }
 
   /**

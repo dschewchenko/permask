@@ -550,7 +550,24 @@ describe('cRUD Permission Tests', () => {
 
   beforeEach(() => {
     crudPermask = new PermaskBuilder<typeof DefaultPermissionAccess, CrudGroups>({
-      permissions: DefaultPermissionAccess,
+      permissions: {
+        NONE: 0, // 0b00000 - No permissions
+        CREATE: 1, // 0b00001 - Create only
+        READ: 2, // 0b00010 - Read only
+        UPDATE: 4, // 0b00100 - Update only
+        DELETE: 8, // 0b01000 - Delete only
+        CREATE_READ: 3, // 0b00011 - Create + Read
+        CREATE_UPDATE: 5, // 0b00101 - Create + Update
+        CREATE_DELETE: 9, // 0b01001 - Create + Delete
+        READ_UPDATE: 6, // 0b00110 - Read + Update
+        READ_DELETE: 10, // 0b01010 - Read + Delete
+        UPDATE_DELETE: 12, // 0b01100 - Update + Delete
+        CREATE_READ_UPDATE: 7, // 0b00111 - Create + Read + Update
+        CREATE_READ_DELETE: 11, // 0b01011 - Create + Read + Delete
+        CREATE_UPDATE_DELETE: 13, // 0b01101 - Create + Update + Delete
+        READ_UPDATE_DELETE: 14, // 0b01110 - Read + Update + Delete
+        ALL: 15, // 0b01111 - All permissions combined
+      },
       accessBits: 4,
       groups: {
         USERS: 1,
