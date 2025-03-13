@@ -30,7 +30,7 @@ describe('Permask', () => {
         UPDATE: DefaultPermissionAccess.UPDATE,  // 4
         DELETE: DefaultPermissionAccess.DELETE // 8
       },
-      accessBits: 5,
+      accessBits: 4,
       groups: {
         USERS: 1,
         ADMINS: 2
@@ -73,11 +73,11 @@ describe('Permask', () => {
       const readPermission = basicPermask.for('USERS').grant(['READ']).value();
       const readUpdatePermission = basicPermask.for('USERS').grant(['READ', 'UPDATE']).value();
       
-      // Group 1 (USERS) << 5 bits = 32, plus READ (2) = 34
-      expect(readPermission).toBe(34);
+      // Group 1 (USERS) << 4 bits = 16, plus READ (2) = 18
+      expect(readPermission).toBe(18);
       
-      // Group 1 (USERS) << 5 bits = 32, plus READ (2) + UPDATE (4) = 38
-      expect(readUpdatePermission).toBe(38);
+      // Group 1 (USERS) << 4 bits = 16, plus READ (2) + UPDATE (4) = 22
+      expect(readUpdatePermission).toBe(22);
     });
     
     it('should create permissions with explicit group IDs', () => {
@@ -521,7 +521,7 @@ describe('CRUD Permission Tests', () => {
   beforeEach(() => {
     crudPermask = new PermaskBuilder({
       permissions: DefaultPermissionAccess,
-      accessBits: 5,
+      accessBits: 4,
       groups: {
         USERS: 1,
         DOCUMENTS: 2,

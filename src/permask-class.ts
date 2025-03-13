@@ -1,7 +1,7 @@
 /**
  * Default number of bits allocated for permissions (5 bits)
  */
-const ACCESS_BITS = 5;
+const ACCESS_BITS = 4;
 
 /**
  * Default access mask for 5 bits (0b11111 = 31)
