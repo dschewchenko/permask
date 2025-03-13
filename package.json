@@ -6,6 +6,7 @@
   "main": "dist/permask.cjs",
   "module": "dist/permask.js",
   "types": "dist/index.d.ts",
+  "sideEffects": false,
   "scripts": {
     "build": "vite build",
     "test": "vitest",
