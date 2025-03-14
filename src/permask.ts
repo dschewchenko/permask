@@ -3,7 +3,7 @@ import {
   canDelete,
   canRead,
   canUpdate,
-  canWrite,
+  canCreate,
   createBitmask,
   getPermissionGroup,
   hasPermissionGroup,
@@ -37,7 +37,7 @@ export function createPermask<
     hasGroup: hasPermissionGroup,
     getGroupName,
     canRead,
-    canWrite,
+    canCreate,
     canDelete,
     canUpdate
   };

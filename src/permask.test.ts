@@ -18,7 +18,7 @@ describe("Permask", () => {
       const bitmask = permask.create({
         group: PermissionGroup.POSTS,
         read: true,
-        write: false,
+        create: false,
         delete: true,
         update: false
       });
@@ -31,7 +31,7 @@ describe("Permask", () => {
       expect(parsed).toEqual({
         group: PermissionGroup.POSTS,
         read: true,
-        write: false,
+        create: false,
         delete: true,
         update: false
       });
@@ -53,18 +53,18 @@ describe("Permask", () => {
       expect(noGroup).toBe(false);
     });
 
-    it("should check read, write, delete, and update access", () => {
+    it("should check read, create, delete, and update access", () => {
       const bitmask = permask.create({
         group: PermissionGroup.LIKES,
         read: true,
-        write: true,
+        create: true,
         delete: false,
         update: true
       });
 
       expect(permask.hasGroup(bitmask, PermissionGroup.LIKES)).toBe(true);
       expect(permask.canRead(bitmask)).toBe(true);
-      expect(permask.canWrite(bitmask)).toBe(true);
+      expect(permask.canCreate(bitmask)).toBe(true);
       expect(permask.canDelete(bitmask)).toBe(false);
       expect(permask.canUpdate(bitmask)).toBe(true);
     });

@@ -37,4 +37,4 @@ app.get("/protected", checkPermissions(groups.admin, PermissionAccess.READ), (re
     res.send("protected route");
 });
 ```
-  
+
