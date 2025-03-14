@@ -15,7 +15,7 @@ For example in UNIX file systems, bitmasks are used to manage file permissions (
 ## Why use bitmasks?
 
 - Fast: Bitwise operations (&, |) are faster than comparing strings.
-- Compact: Combine multiple permissions in a single integer (e.g., 0b1111 for read, write, delete, update).
+- Compact: Combine multiple permissions in a single integer (e.g., 0b1111 for read, write, update, delete).
   Just 4 bits for access control. For groups, you can use any number of bits,
 - Flexible: Easy to check, add, or remove permissions.
 
@@ -24,14 +24,14 @@ Example of using bitmasks:
 ```ts
 const READ = 1;   // 0b0001
 const WRITE = 2;  // 0b0010
-const DELETE = 4; // 0b0100
-const UPDATE = 8; // 0b1000
+const UPDATE = 4; // 0b0100
+const DELETE = 8; // 0b1000
 
-const userPermissions = READ | WRITE | UPDATE; // 0b1011
+const userPermissions = READ | WRITE | UPDATE; // 0b0111
 const canRead = (userPermissions & READ) === READ;     // true
 const canWrite = (userPermissions & WRITE) === WRITE;   // true
-const canDelete = (userPermissions & DELETE) === DELETE; // false
 const canUpdate = (userPermissions & UPDATE) === UPDATE; // true
+const canDelete = (userPermissions & DELETE) === DELETE; // false
 ```
 
 ## Bitmask in permask structure
@@ -39,10 +39,10 @@ const canUpdate = (userPermissions & UPDATE) === UPDATE; // true
 ```
 [ Group (0–29 bits) | Permissions (4 bits) ]
 
-  0b0001_0111 = 17
+  0b0001_0111 = 23
     \__/ \__/
      /     \
-Group(2)  Permissions(read, write, delete, update)
+Group(1)  Permissions(read, write, update)
 ```
 
 
@@ -92,16 +92,16 @@ const bitmask2 = permask.create({
   group: GroupEnum.LIKE,
   read: true,
   write: false,
-  delete: false,
-  update: true
+  update: true,
+  delete: false
 });
-console.log(bitmask2); // 25 (0b11001)
+console.log(bitmask2); // 53 (0b110101)
 ```
 
 - #### parse a bitmask to an object:
 ```ts
 const parsed = permask.parse(31); // 0b11111
-console.log(parsed); // { group: 2, read: true, write: true, delete: true, update: true }
+console.log(parsed); // { group: 1, read: true, write: true, update: true, delete: true }
 ```
 
 - #### check if a bitmask has a specific group:
@@ -160,14 +160,14 @@ You can use `permask` just with bitmask utility functions.
   const PermissionAccess = {
       READ: 1,    // 0b0001
       WRITE: 2,   // 0b0010
-      DELETE: 4,  // 0b0100
-      UPDATE: 8   // 0b1000
+      UPDATE: 4,  // 0b0100
+      DELETE: 8   // 0b1000
   } as const;
   ```
 - `PermissionAccessBitmasks` - full access bitmask for usual cases.
   ```ts
   const PermissionAccessBitmasks = {
-      FULL: 0b1111,  // read, write, delete, update
+      FULL: 0b1111,  // read, write, update, delete
       WRITE: 0b0011, // read, write
       READ: 0b0001   // read-only
   } as const;

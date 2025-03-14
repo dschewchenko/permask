@@ -7,7 +7,7 @@ enum PermissionGroup {
   COMMENTS = 3
 }
 
-const postsReadDeleteUpdate = 0b10000 | 0b0101; // 21 = (POSTS << 4) | (READ | DELETE)
+const postsReadDeleteUpdate = 0b10000 | 0b1001; // 25 = (POSTS << 4) | (READ | DELETE)
 const invalidGroup = 0b1010000 | 0b0111; // Group 5 (not in enum) with some permissions
 
 describe("Permask", () => {

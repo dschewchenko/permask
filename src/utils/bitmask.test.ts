@@ -29,7 +29,7 @@ const bitmask0 = 0b00000; // 0 User, no access
 const bitmask1 = 0b10000 | 0b1111; // 31 = POST (1) << 4 | FULL ACCESS (15)
 const bitmask2 = 0b100000 | 0b0001; // 33 = COMMENT (2) << 4 | READ (1)
 const bitmask3 = 0b110000 | 0b1111; // 63 = LIKE (3) << 4 | FULL ACCESS (15)
-const bitmaskWithUpdate = 0b10000 | 0b1001; // 25 = POST (1) << 4 | READ+UPDATE (9)
+const bitmaskWithUpdate = 0b10000 | 0b0101; // 21 = POST (1) << 4 | READ+UPDATE (5)
 
 describe("Permission Bitmask Utilities", () => {
   describe("createBitmask", () => {
@@ -124,7 +124,7 @@ describe("Permission Bitmask Utilities", () => {
       expect(getPermissionAccess(bitmask1)).toBe(0b1111);
       expect(getPermissionAccess(bitmask2)).toBe(0b0001);
       expect(getPermissionAccess(bitmask3)).toBe(0b1111);
-      expect(getPermissionAccess(bitmaskWithUpdate)).toBe(0b1001);
+      expect(getPermissionAccess(bitmaskWithUpdate)).toBe(0b0101);
     });
   });
 
