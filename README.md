@@ -34,6 +34,17 @@ const canDelete = (userPermissions & DELETE) === DELETE; // false
 const canUpdate = (userPermissions & UPDATE) === UPDATE; // true
 ```
 
+## Bitmask in permask structure
+
+```
+[ Group (0–29 bits) | Permissions (3 bits) ]
+
+  0b0001_0111 = 17
+    \__/ \__/
+     /     \
+Group(2)  Permissions(read, write, delete)
+```
+
 
 ## Installation
 
@@ -57,17 +68,11 @@ yarn add permask
 // examples
 // with object
 const PermissionGroup = {
-  POST: 0,
-  COMMENT: 1,
-  LIKE: 2
+  POST: 1,
+  COMMENT: 2,
+  LIKE: 3
 } as const;
 
-// with enum
-enum PermissionGroup {
-  POST,
-  COMMENT,
-  LIKE
-}
 ```
 
 ### 2. Initialize permask
@@ -100,6 +105,7 @@ console.log(parsed); // { group: 2, read: true, write: true, delete: true, updat
 ```
 
 - #### check if a bitmask has a specific group:
+
 ```ts
 const hasGroup = permask.hasGroup(23, PermissionGroup.LIKE);
 console.log(hasGroup); // true
@@ -193,6 +199,8 @@ If you have any questions or suggestions, feel free to open an issue or pull req
 - [ ] Add easy-to-use integration with frameworks
   - [x] Express
   - [ ] Fastify
+  - [ ] H3
+  - [ ] Nitro
   - [ ] NestJS
   - [ ] Hono
   - [ ] Koa
