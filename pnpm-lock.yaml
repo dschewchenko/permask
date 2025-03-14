@@ -7,10 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      bumpp:
-        specifier: ^10.1.0
-        version: 10.1.0(magicast@0.3.5)
     devDependencies:
       '@biomejs/biome':
         specifier: ^1.9.4
@@ -30,6 +26,9 @@ importers:
       biome:
         specifier: ^0.3.3
         version: 0.3.3
+      bumpp:
+        specifier: ^10.1.0
+        version: 10.1.0(magicast@0.3.5)
       husky:
         specifier: ^9.1.7
         version: 9.1.7

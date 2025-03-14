@@ -30,7 +30,8 @@
     "typescript": "^5.8.2",
     "vite": "^6.2.1",
     "vite-plugin-dts": "^4.5.3",
-    "vitest": "^3.0.8"
+    "vitest": "^3.0.8",
+    "bumpp": "^10.1.0"
   },
   "files": [
     "dist/*",
@@ -71,8 +72,5 @@
       "core-js",
       "esbuild"
     ]
-  },
-  "dependencies": {
-    "bumpp": "^10.1.0"
   }
 }
