@@ -9,8 +9,5 @@ export default defineConfig({
       include: ["src/**/*.ts"],
       reportOnFailure: true
     },
-    environment: "node",
-    include: ["**/*.test.ts"],
-    exclude: ["**/node_modules/**", "**/dist/**"]
   }
 });
