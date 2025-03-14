@@ -15,8 +15,8 @@ For example in UNIX file systems, bitmasks are used to manage file permissions (
 ## Why use bitmasks?
 
 - Fast: Bitwise operations (&, |) are faster than comparing strings.
-- Compact: Combine multiple permissions in a single integer (e.g., 0b111 for read, write, delete).
-  Just 3 bits for access control. For groups, you can use any number of bits,
+- Compact: Combine multiple permissions in a single integer (e.g., 0b1111 for read, write, delete, update).
+  Just 4 bits for access control. For groups, you can use any number of bits,
 - Flexible: Easy to check, add, or remove permissions.
 
 Example of using bitmasks:
@@ -37,12 +37,12 @@ const canUpdate = (userPermissions & UPDATE) === UPDATE; // true
 ## Bitmask in permask structure
 
 ```
-[ Group (0–29 bits) | Permissions (3 bits) ]
+[ Group (0–29 bits) | Permissions (4 bits) ]
 
   0b0001_0111 = 17
     \__/ \__/
      /     \
-Group(2)  Permissions(read, write, delete)
+Group(2)  Permissions(read, write, delete, update)
 ```
 
 
