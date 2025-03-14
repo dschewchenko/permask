@@ -7,8 +7,8 @@ enum PermissionGroup {
   COMMENTS = 3
 }
 
-const postsReadWrite = 0b1101;
-const invalidGroup = 0b100111;
+const postsReadDeleteUpdate = 0b10000 | 0b0101; // 21 = (POSTS << 4) | (READ | DELETE)
+const invalidGroup = 0b1010000 | 0b0111; // Group 5 (not in enum) with some permissions
 
 describe("Permask", () => {
   describe("createPermask", () => {
@@ -19,24 +19,26 @@ describe("Permask", () => {
         group: PermissionGroup.POSTS,
         read: true,
         write: false,
-        delete: true
+        delete: true,
+        update: false
       });
 
-      expect(bitmask).toBe(postsReadWrite);
+      expect(bitmask).toBe(postsReadDeleteUpdate);
     });
 
     it("should parse a bitmask correctly", () => {
-      const parsed = permask.parse(postsReadWrite);
+      const parsed = permask.parse(postsReadDeleteUpdate);
       expect(parsed).toEqual({
         group: PermissionGroup.POSTS,
         read: true,
         write: false,
-        delete: true
+        delete: true,
+        update: false
       });
     });
 
     it("should return group name from bitmask", () => {
-      const groupName = permask.getGroupName(postsReadWrite);
+      const groupName = permask.getGroupName(postsReadDeleteUpdate);
       expect(groupName).toBe("POSTS");
 
       const undefinedGroup = permask.getGroupName(invalidGroup);
@@ -44,25 +46,27 @@ describe("Permask", () => {
     });
 
     it("should check group presence in a bitmask", () => {
-      const hasGroup = permask.hasGroup(postsReadWrite, PermissionGroup.POSTS);
+      const hasGroup = permask.hasGroup(postsReadDeleteUpdate, PermissionGroup.POSTS);
       expect(hasGroup).toBe(true);
 
       const noGroup = permask.hasGroup(invalidGroup, PermissionGroup.LIKES);
       expect(noGroup).toBe(false);
     });
 
-    it("should check read, write, and delete access", () => {
+    it("should check read, write, delete, and update access", () => {
       const bitmask = permask.create({
         group: PermissionGroup.LIKES,
         read: true,
         write: true,
-        delete: false
+        delete: false,
+        update: true
       });
 
       expect(permask.hasGroup(bitmask, PermissionGroup.LIKES)).toBe(true);
       expect(permask.canRead(bitmask)).toBe(true);
       expect(permask.canWrite(bitmask)).toBe(true);
       expect(permask.canDelete(bitmask)).toBe(false);
+      expect(permask.canUpdate(bitmask)).toBe(true);
     });
   });
 });

@@ -2,6 +2,7 @@ import type { EnumOrObjectType, StringKeysType } from "./types/utils";
 import {
   canDelete,
   canRead,
+  canUpdate,
   canWrite,
   createBitmask,
   getPermissionGroup,
@@ -37,6 +38,7 @@ export function createPermask<
     getGroupName,
     canRead,
     canWrite,
-    canDelete
+    canDelete,
+    canUpdate
   };
 }

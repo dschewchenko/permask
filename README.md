@@ -22,14 +22,16 @@ For example in UNIX file systems, bitmasks are used to manage file permissions (
 Example of using bitmasks:
 
 ```ts
-const READ = 1; // 0b001
-const WRITE = 2; // 0b010
-const DELETE = 4; // 0b100
+const READ = 1;   // 0b0001
+const WRITE = 2;  // 0b0010
+const DELETE = 4; // 0b0100
+const UPDATE = 8; // 0b1000
 
-const userPermissions = READ | WRITE; // 0b011
-const canRead = (userPermissions & READ) === READ; // true
-const canWrite = (userPermissions & WRITE) === WRITE; // true
+const userPermissions = READ | WRITE | UPDATE; // 0b1011
+const canRead = (userPermissions & READ) === READ;     // true
+const canWrite = (userPermissions & WRITE) === WRITE;   // true
 const canDelete = (userPermissions & DELETE) === DELETE; // false
+const canUpdate = (userPermissions & UPDATE) === UPDATE; // true
 ```
 
 
@@ -85,15 +87,16 @@ const bitmask2 = permask.create({
   group: GroupEnum.LIKE,
   read: true,
   write: false,
-  delete: false
+  delete: false,
+  update: true
 });
-console.log(bitmask2); // 17 (0b10001)
+console.log(bitmask2); // 25 (0b11001)
 ```
 
 - #### parse a bitmask to an object:
 ```ts
-const parsed = permask.parse(23); // 0b10111
-console.log(parsed); // { group: 2, read: true, write: true, delete: true }
+const parsed = permask.parse(31); // 0b11111
+console.log(parsed); // { group: 2, read: true, write: true, delete: true, update: true }
 ```
 
 - #### check if a bitmask has a specific group:
@@ -107,7 +110,8 @@ console.log(hasGroup); // true
 const canRead = permask.canRead(17);
 const canWrite = permask.canWrite(17);
 const canDelete = permask.canDelete(17);
-console.log(canRead, canWrite, canDelete); // true, false, false
+const canUpdate = permask.canUpdate(17);
+console.log(canRead, canWrite, canDelete, canUpdate); // true, false, false, false
 ```
 
 - #### get group name from bitmask:
@@ -128,8 +132,8 @@ You can use `permask` just with bitmask utility functions.
 ### Use bitmask utilities:
 
 **Functions:**
-- `createBitmask({ group: number, read: boolean, write: boolean, delete: boolean }): number` - creates a bitmask from an options.
-- `parseBitmask(bitmask: number): { group: number, read: boolean, write: boolean, delete: boolean }` - parses a bitmask and returns an object.
+- `createBitmask({ group: number, read: boolean, write: boolean, delete: boolean, update: boolean }): number` - creates a bitmask from an options.
+- `parseBitmask(bitmask: number): { group: number, read: boolean, write: boolean, delete: boolean, update: boolean }` - parses a bitmask and returns an object.
 - `getPermissionGroup(bitmask: number): number` - returns a group number from a bitmask.
 - `getPermissionAccess(bitmask: number): number` - returns an access number from a bitmask.
 - `hasPermissionGroup(bitmask: number, group: number): boolean` - checks if a bitmask has a specific group.
@@ -139,6 +143,7 @@ You can use `permask` just with bitmask utility functions.
   - `canRead(bitmask: number): boolean`
   - `canWrite(bitmask: number): boolean`
   - `canDelete(bitmask: number): boolean`
+  - `canUpdate(bitmask: number): boolean`
 - `setPermissionGroup(bitmask: number, group: number): number` - sets a group in a bitmask (will overwrite the previous group).
 - `setPermissionAccess(bitmask: number, access: number): number` - sets access in a bitmask (will overwrite the previous access).
 - `getPermissionBitmask(group: number, access: number): number` - creates a bitmask from a group and access.
@@ -147,17 +152,18 @@ You can use `permask` just with bitmask utility functions.
 - `PermissionAccess` - an enum-like object with access types.
   ```ts
   const PermissionAccess = {
-      READ: 1,  // 0b001
-      WRITE: 2, // 0b010
-      DELETE: 4 // 0b100
+      READ: 1,    // 0b0001
+      WRITE: 2,   // 0b0010
+      DELETE: 4,  // 0b0100
+      UPDATE: 8   // 0b1000
   } as const;
   ```
 - `PermissionAccessBitmasks` - full access bitmask for usual cases.
   ```ts
   const PermissionAccessBitmasks = {
-      FULL: 0b111,  // read, write, delete
-      WRITE: 0b011, // read, write
-      READ: 0b001   // read-only
+      FULL: 0b1111,  // read, write, delete, update
+      WRITE: 0b0011, // read, write
+      READ: 0b0001   // read-only
   } as const;
   ```
 
