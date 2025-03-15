@@ -14,7 +14,8 @@ export type PermissionAccessType = keyof typeof PermissionAccess;
  * Predefined permission access bitmasks.
  */
 export const PermissionAccessBitmasks = {
-  FULL: 15, // 0b1111 - read, create, update, delete
-  CREATE: 3, // 0b0011 - read, create
-  READ: 1   // 0b0001 - read-only
+  FULL: 15,       // 0b1111 - read, create, update, delete
+  READ_CREATE: 3, // 0b0011 - read, create
+  READ_UPDATE: 5, // 0b0101 - read, update
+  READ_DELETE: 9, // 0b1001 - read, delete
 } as const;
