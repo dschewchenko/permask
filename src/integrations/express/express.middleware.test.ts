@@ -47,7 +47,7 @@ describe("permask Express Middleware", () => {
     const req = mockRequest([createBitmask({ group: groups.POSTS, read: true })]);
     const res = mockResponse();
 
-    checkPermission(groups.POSTS, PermissionAccess.WRITE)(req, res, mockNext);
+    checkPermission(groups.POSTS, PermissionAccess.CREATE)(req, res, mockNext);
 
     expect(mockNext).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(403);
