@@ -148,6 +148,8 @@ You can use `permask` just with bitmask utility functions.
 - `setPermissionGroup(bitmask: number, group: number): number` - sets a group in a bitmask (will overwrite the previous group).
 - `setPermissionAccess(bitmask: number, access: number): number` - sets access in a bitmask (will overwrite the previous access).
 - `getPermissionBitmask(group: number, access: number): number` - creates a bitmask from a group and access.
+- `packBitbasks(bitmasks: number[], urlSafe?: boolean): string` - packs bitmasks to base64 string. (more compact than JSON.stringify)
+- `unpackBitmasks(base64: string, urlSafe?: boolean): number[]` - unpacks bitmasks from a base64 string.
 
 **Constants:**
 - `PermissionAccess` - an enum-like object with access types.
