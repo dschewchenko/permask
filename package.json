@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "type": "module",
   "description": "A lightweight utility library for managing permission bitmasks with groups and access levels",
-  "main": "dist/permask.cjs",
-  "module": "dist/permask.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/permask.cjs",
+  "module": "./dist/permask.js",
+  "types": "./dist/index.d.ts",
   "sideEffects": false,
   "scripts": {
     "build": "vite build",
