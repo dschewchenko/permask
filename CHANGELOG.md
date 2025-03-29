@@ -1,3 +1,15 @@
+# [2.0.0](https://github.com/dschewchenko/permask/compare/v1.1.0...v2.0.0) (2025-03-29)
+
+
+### Features
+
+* extend permission model to include update access - 4 bits ([#16](https://github.com/dschewchenko/permask/issues/16)) ([1a0bc02](https://github.com/dschewchenko/permask/commit/1a0bc022af622b3b699c60b008dd2b75be80abbd))
+
+
+### BREAKING CHANGES
+
+* size and naming changed for access part to fully match crud operations
+
 # [1.1.0](https://github.com/dschewchenko/permask/compare/v1.0.0...v1.1.0) (2025-03-16)
 
 
