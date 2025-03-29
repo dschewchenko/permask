@@ -1,10 +1,11 @@
 /**
- * Permission access enum. 3 bits.
+ * Permission access enum. 4 bits.
  */
 export const PermissionAccess = {
-  READ: 1, // 0b001
-  WRITE: 2, // 0b010
-  DELETE: 4 // 0b100
+  READ: 1,   // 0b0001
+  CREATE: 2,  // 0b0010
+  UPDATE: 4, // 0b0100
+  DELETE: 8, // 0b1000
 } as const;
 
 export type PermissionAccessType = keyof typeof PermissionAccess;
@@ -13,7 +14,7 @@ export type PermissionAccessType = keyof typeof PermissionAccess;
  * Predefined permission access bitmasks.
  */
 export const PermissionAccessBitmasks = {
-  FULL: 7, // 0b111
-  WRITE: 3, // 0b011
-  READ: 1 // 0b001
+  FULL: 15, // 0b1111 - read, create, update, delete
+  CREATE: 3, // 0b0011 - read, create
+  READ: 1   // 0b0001 - read-only
 } as const;
