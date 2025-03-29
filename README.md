@@ -183,7 +183,7 @@ I'm using `permask` in my projects to manage permissions for users. It's easy to
 
 For example, I'm storing bitmask permissions array in access tokens for users. It's easy to check if user has access to a specific functionality or group.
 
-It's possible to store ~820 bitmask permissions(1 group + 3 access) in 1kB.
+It's possible to store ~820 bitmask permissions(1 group + 3 access) in 1kB. In JS - 128 bitmasks, because each number in JS weights 4bytes
 
 With strings like `Posts.Read`, `Users.Create` it will be just ~35 permissions (1 group + 1 access)
 
