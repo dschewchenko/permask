@@ -56,7 +56,7 @@ export function unpackBitmasks(packed: string, urlSafe = false): number[] {
     const binary = atob(base64String);
 
     const count = binary.length >>> 2;
-    const result = new Array(count);
+    const result = new Array(count).fill(0);
 
     for (let i = 0, offset = 0; i < count; i++, offset += 4) {
       result[i] =
