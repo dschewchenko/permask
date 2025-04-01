@@ -1,3 +1,10 @@
+## [2.0.1](https://github.com/dschewchenko/permask/compare/v2.0.0...v2.0.1) (2025-04-01)
+
+
+### Bug Fixes
+
+* initialize result array with zeros in unpackBitmasks function ([#22](https://github.com/dschewchenko/permask/issues/22)) ([aaea417](https://github.com/dschewchenko/permask/commit/aaea4176e1f95b7a099a01135e131eaad3b0e333))
+
 # [2.0.0](https://github.com/dschewchenko/permask/compare/v1.1.0...v2.0.0) (2025-03-29)
 
 
