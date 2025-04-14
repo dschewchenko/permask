@@ -1,15 +1,13 @@
 name: Deploy Vue Playground to GitHub Pages
 
 on:
-  # Workflow'u manuel olarak tetiklemek için
   workflow_dispatch:
-  # Main branch'e push yapıldığında otomatik çalışması için
   push:
     branches:
       - main
     paths:
       - 'playground/vue/**'
-      - 'src/**'  # Temel kütüphane değişikliklerinde de build etmek için
+      - 'src/**'
 
 jobs:
   build-and-deploy:
