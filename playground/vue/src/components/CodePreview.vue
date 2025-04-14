@@ -21,13 +21,7 @@ const jsonConfig = computed(() => {
       return {
         group: groupName,
         bitmask,
-        value: `0b${bitmask.toString(2)}`,
-        access: {
-          read: parsed.read,
-          create: parsed.create,
-          update: parsed.update,
-          delete: parsed.delete
-        }
+        value: `0b${bitmask.toString(2)}`
       };
     })
   };

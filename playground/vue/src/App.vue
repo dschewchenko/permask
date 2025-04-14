@@ -88,13 +88,58 @@ const exportConfig = () => {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 };
+
+// Import configuration
+const importConfig = () => {
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "application/json";
+  
+  input.onchange = (e) => {
+    const file = (e.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const config = JSON.parse(e.target?.result as string);
+        
+        if (config.groups && typeof config.groups === 'object') {
+          groups.value = config.groups;
+        }
+        
+        if (config.permissions && Array.isArray(config.permissions)) {
+          // Handle two possible formats:
+          // 1. Array of numbers (just bitmasks)
+          // 2. Array of objects with bitmask property
+          permissions.value = config.permissions.map(p => 
+            typeof p === 'number' ? p : (p.bitmask || 0)
+          );
+        }
+      } catch (err) {
+        alert("Failed to import configuration: Invalid JSON format");
+        console.error(err);
+      }
+    };
+    
+    reader.readAsText(file);
+  };
+  
+  input.click();
+};
 </script>
 
 <template>
   <div class="max-w-7xl mx-auto px-5">
     <header class="flex justify-between items-center mb-8 pb-5 border-b border-gray-200">
       <h1 class="text-2xl font-bold text-gray-800">Permask Playground</h1>
-      <div class="actions">
+      <div class="actions flex gap-2">
+        <button 
+          @click="importConfig"
+          class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded font-medium transition-colors"
+        >
+          Import Config
+        </button>
         <button 
           @click="exportConfig"
           class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-medium transition-colors"
