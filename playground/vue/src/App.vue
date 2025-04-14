@@ -91,25 +91,30 @@ const exportConfig = () => {
 </script>
 
 <template>
-  <div class="container">
-    <header>
-      <h1>Permask Playground</h1>
+  <div class="max-w-7xl mx-auto px-5">
+    <header class="flex justify-between items-center mb-8 pb-5 border-b border-gray-200">
+      <h1 class="text-2xl font-bold text-gray-800">Permask Playground</h1>
       <div class="actions">
-        <button @click="exportConfig">Export Config</button>
+        <button 
+          @click="exportConfig"
+          class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-medium transition-colors"
+        >
+          Export Config
+        </button>
       </div>
     </header>
     
-    <main>
-      <section class="config-section">
-        <h2>Group Configuration</h2>
+    <main class="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Group Configuration</h2>
         <GroupManager 
           :groups="groups" 
           @update-groups="updateGroups" 
         />
       </section>
       
-      <section class="permissions-section">
-        <h2>Permission Configuration</h2>
+      <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
+        <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Permission Configuration</h2>
         <PermissionTable 
           :groups="groups" 
           :permissions="permissions" 
@@ -119,8 +124,8 @@ const exportConfig = () => {
         />
       </section>
       
-      <section class="preview-section">
-        <h2>Code Preview</h2>
+      <section class="bg-gray-50 rounded-lg p-5 shadow-sm lg:col-span-2">
+        <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Code Preview</h2>
         <CodePreview 
           :groups="groups" 
           :permissions="permissions"
@@ -130,68 +135,3 @@ const exportConfig = () => {
     </main>
   </div>
 </template>
-
-<style scoped>
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
-}
-
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #eaeaea;
-}
-
-h1 {
-  margin: 0;
-  color: #333;
-}
-
-main {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 30px;
-}
-
-@media (min-width: 1024px) {
-  main {
-    grid-template-columns: 1fr 1fr;
-  }
-  
-  .preview-section {
-    grid-column: span 2;
-  }
-}
-
-section {
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-h2 {
-  margin-top: 0;
-  color: #444;
-  font-size: 1.25rem;
-}
-
-button {
-  background-color: #4b70e2;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-button:hover {
-  background-color: #3a5bbf;
-}
-</style>

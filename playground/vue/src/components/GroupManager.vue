@@ -56,120 +56,47 @@ const removeGroup = (groupName: string) => {
 </script>
 
 <template>
-  <div class="group-manager">
-    <div class="groups-list">
-      <div v-for="(groupId, groupName) in localGroups" :key="groupName" class="group-item">
-        <div class="group-info">
-          <span class="group-name">{{ groupName }}</span>
-          <span class="group-id">(ID: {{ groupId }})</span>
+  <div class="flex flex-col gap-4">
+    <div class="flex flex-col gap-2 max-h-[250px] overflow-y-auto">
+      <div 
+        v-for="(groupId, groupName) in localGroups" 
+        :key="groupName" 
+        class="flex justify-between items-center p-2 px-3 bg-white rounded border border-gray-200"
+      >
+        <div class="flex items-center gap-2">
+          <span class="font-medium">{{ groupName }}</span>
+          <span class="text-sm text-gray-500">(ID: {{ groupId }})</span>
         </div>
         <button 
           @click="removeGroup(groupName)" 
-          class="remove-btn"
+          class="w-7 h-7 flex items-center justify-center bg-gray-100 hover:bg-red-500 hover:text-white text-gray-600 rounded border border-gray-200 hover:border-red-500 transition-colors"
           title="Remove this group"
         >
           ✕
         </button>
       </div>
       
-      <div v-if="Object.keys(localGroups).length === 0" class="no-groups">
+      <div 
+        v-if="Object.keys(localGroups).length === 0" 
+        class="py-4 text-center text-gray-500 italic bg-white rounded border border-dashed border-gray-300"
+      >
         No groups defined. Add a group below.
       </div>
     </div>
     
-    <div class="add-group-form">
+    <div class="flex gap-2 mt-1">
       <input 
         v-model="newGroupName" 
         placeholder="New group name"
         @keyup.enter="addGroup"
+        class="flex-1 px-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
       />
-      <button @click="addGroup">Add Group</button>
+      <button 
+        @click="addGroup"
+        class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm font-medium transition-colors"
+      >
+        Add Group
+      </button>
     </div>
   </div>
 </template>
-
-<style scoped>
-.group-manager {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.groups-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 250px;
-  overflow-y: auto;
-}
-
-.group-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 12px;
-  background-color: white;
-  border-radius: 4px;
-  border: 1px solid #e0e0e0;
-}
-
-.group-info {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.group-name {
-  font-weight: 500;
-}
-
-.group-id {
-  font-size: 0.85rem;
-  color: #666;
-}
-
-.no-groups {
-  padding: 15px;
-  text-align: center;
-  color: #777;
-  font-style: italic;
-  background-color: white;
-  border-radius: 4px;
-  border: 1px dashed #ddd;
-}
-
-.add-group-form {
-  display: flex;
-  gap: 8px;
-  margin-top: 5px;
-}
-
-.add-group-form input {
-  flex: 1;
-  padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.remove-btn {
-  background-color: #f5f5f5;
-  color: #666;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  font-size: 12px;
-}
-
-.remove-btn:hover {
-  background-color: #ff4d4f;
-  color: white;
-  border-color: #ff4d4f;
-}
-</style>

@@ -62,46 +62,54 @@ watch(() => props.groups, () => {
 </script>
 
 <template>
-  <div class="permission-table-wrapper">
-    <table class="permission-table">
+  <div class="overflow-x-auto">
+    <table class="w-full border-collapse">
       <thead>
         <tr>
-          <th>Group</th>
-          <th>Read</th>
-          <th>Create</th>
-          <th>Update</th>
-          <th>Delete</th>
+          <th class="p-3 bg-gray-100 font-semibold text-left">Group</th>
+          <th class="p-3 bg-gray-100 font-semibold text-center">Read</th>
+          <th class="p-3 bg-gray-100 font-semibold text-center">Create</th>
+          <th class="p-3 bg-gray-100 font-semibold text-center">Update</th>
+          <th class="p-3 bg-gray-100 font-semibold text-center">Delete</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(groupValue, groupKey) in groups" :key="groupKey">
-          <td>{{ groupKey }}</td>
-          <td>
+        <tr 
+          v-for="(groupValue, groupKey) in groups" 
+          :key="groupKey"
+          class="hover:bg-gray-50 border-b border-gray-200"
+        >
+          <td class="p-3 font-medium">{{ groupKey }}</td>
+          <td class="p-3 text-center">
             <input 
               type="checkbox" 
               :checked="permissionsMap[groupKey]?.read" 
-              @change="updatePermission(groupKey, 'read', $event.target.checked)" 
+              @change="updatePermission(groupKey, 'read', $event.target.checked)"
+              class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
-          <td>
+          <td class="p-3 text-center">
             <input 
               type="checkbox" 
               :checked="permissionsMap[groupKey]?.create" 
-              @change="updatePermission(groupKey, 'create', $event.target.checked)" 
+              @change="updatePermission(groupKey, 'create', $event.target.checked)"
+              class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
-          <td>
+          <td class="p-3 text-center">
             <input 
               type="checkbox" 
               :checked="permissionsMap[groupKey]?.update" 
               @change="updatePermission(groupKey, 'update', $event.target.checked)" 
+              class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
-          <td>
+          <td class="p-3 text-center">
             <input 
               type="checkbox" 
               :checked="permissionsMap[groupKey]?.delete" 
-              @change="updatePermission(groupKey, 'delete', $event.target.checked)" 
+              @change="updatePermission(groupKey, 'delete', $event.target.checked)"
+              class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
         </tr>
@@ -111,39 +119,4 @@ watch(() => props.groups, () => {
 </template>
 
 <style scoped>
-.permission-table-wrapper {
-  overflow-x: auto;
-}
-
-.permission-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-spacing: 0;
-}
-
-.permission-table th, 
-.permission-table td {
-  padding: 12px 15px;
-  text-align: center;
-  border-bottom: 1px solid #ddd;
-}
-
-.permission-table th {
-  background-color: #f2f2f2;
-  font-weight: 600;
-}
-
-.permission-table td:first-child {
-  text-align: left;
-  font-weight: 500;
-}
-
-.permission-table tr:hover {
-  background-color: #f5f5f5;
-}
-
-input[type="checkbox"] {
-  transform: scale(1.2);
-  cursor: pointer;
-}
 </style>

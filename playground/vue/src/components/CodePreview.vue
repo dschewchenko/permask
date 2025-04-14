@@ -121,97 +121,48 @@ const copyToClipboard = (code: string) => {
 </script>
 
 <template>
-  <div class="code-preview">
-    <div class="tabs">
+  <div class="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
+    <div class="flex bg-gray-50 border-b border-gray-200">
       <button 
-        :class="{ active: activeTab === 'json' }" 
-        @click="activeTab = 'json'">
+        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'json',
+                 'text-gray-600 hover:bg-gray-100': activeTab !== 'json' }" 
+        @click="activeTab = 'json'"
+        class="px-4 py-2.5 text-sm font-medium"
+      >
         JSON Config
       </button>
       <button 
-        :class="{ active: activeTab === 'typescript' }" 
-        @click="activeTab = 'typescript'">
+        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'typescript',
+                 'text-gray-600 hover:bg-gray-100': activeTab !== 'typescript' }" 
+        @click="activeTab = 'typescript'"
+        class="px-4 py-2.5 text-sm font-medium"
+      >
         TypeScript
       </button>
       <button 
-        :class="{ active: activeTab === 'usage' }" 
-        @click="activeTab = 'usage'">
+        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'usage',
+                 'text-gray-600 hover:bg-gray-100': activeTab !== 'usage' }" 
+        @click="activeTab = 'usage'"
+        class="px-4 py-2.5 text-sm font-medium"
+      >
         Usage Examples
       </button>
-      <button class="copy-btn" @click="copyToClipboard(
-        activeTab === 'json' ? jsonConfig : 
-        activeTab === 'typescript' ? typeScriptCode : 
-        usageExamples
-      )">
+      <button 
+        class="ml-auto px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-gray-100"
+        @click="copyToClipboard(
+          activeTab === 'json' ? jsonConfig : 
+          activeTab === 'typescript' ? typeScriptCode : 
+          usageExamples
+        )"
+      >
         Copy
       </button>
     </div>
     
-    <div class="code-container">
-      <pre v-if="activeTab === 'json'">{{ jsonConfig }}</pre>
-      <pre v-if="activeTab === 'typescript'">{{ typeScriptCode }}</pre>
-      <pre v-if="activeTab === 'usage'">{{ usageExamples }}</pre>
+    <div class="p-4 overflow-x-auto min-h-[300px] max-h-[500px] overflow-y-auto">
+      <pre v-if="activeTab === 'json'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6 text-gray-800">{{ jsonConfig }}</pre>
+      <pre v-if="activeTab === 'typescript'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6 text-gray-800">{{ typeScriptCode }}</pre>
+      <pre v-if="activeTab === 'usage'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6 text-gray-800">{{ usageExamples }}</pre>
     </div>
   </div>
 </template>
-
-<style scoped>
-.code-preview {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  overflow: hidden;
-  background-color: white;
-}
-
-.tabs {
-  display: flex;
-  background-color: #f5f5f5;
-  border-bottom: 1px solid #ddd;
-}
-
-.tabs button {
-  padding: 10px 16px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  color: #555;
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.tabs button:hover {
-  background-color: #ececec;
-}
-
-.tabs button.active {
-  background-color: white;
-  color: #1a73e8;
-  font-weight: 600;
-  box-shadow: inset 0 -2px 0 #1a73e8;
-}
-
-.tabs .copy-btn {
-  margin-left: auto;
-  color: #1a73e8;
-}
-
-.code-container {
-  padding: 15px;
-  overflow-x: auto;
-  flex: 1;
-  min-height: 300px;
-  max-height: 500px;
-  overflow-y: auto;
-}
-
-pre {
-  margin: 0;
-  white-space: pre-wrap;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-  font-size: 14px;
-  line-height: 1.5;
-  color: #333;
-}
-</style>
