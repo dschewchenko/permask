@@ -5,11 +5,14 @@ import PermissionTable from "./components/PermissionTable.vue";
 import CodePreview from "./components/CodePreview.vue";
 import GroupManager from "./components/GroupManager.vue";
 
-// Initialize with some default groups
+// Initialize with more specific domain-oriented groups
 const groups = ref({
-  ADMIN: 1,
-  EDITOR: 2,
-  VIEWER: 3
+  CONTENT_MANAGER: 1,
+  FINANCIAL_ANALYST: 2, 
+  SUPPORT_AGENT: 3,
+  PRODUCT_OWNER: 4,
+  HR_SPECIALIST: 5,
+  DATA_SCIENTIST: 6
 });
 
 // Track permissions as an array of bitmasks
