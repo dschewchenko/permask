@@ -71,7 +71,7 @@ function checkPermission(bitmasks: number[], group: number, permissionType: "rea
 const canAdminRead = checkPermission(permissions, PermissionGroup.${Object.keys(props.groups)[0] || "ADMIN"}, "read");
 console.log(\`Can ${Object.keys(props.groups)[0] || "ADMIN"} read? \${canAdminRead}\`);`;
   
-  return typeScriptCode;
+  return groupsCode;
 });
 
 // Generate usage examples
