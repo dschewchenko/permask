@@ -2,6 +2,11 @@ export const base64ToUrlSafe = (base64: string) => base64.replace(/=/g, "").repl
 
 export const urlSafeToBase64 = (base64: string) => base64.replace(/-/g, "+").replace(/_/g, "/");
 
+type BitDepth = 8 | 16 | 32;
+
+const prefixMap: Record<BitDepth, string> = { 8: "A", 16: "B", 32: "C" };
+const reversePrefixMap: Record<string, BitDepth> = { "A": 8, "B": 16, "C": 32 };
+
 /**
  * Convert bitmasks to base64
  * Also it will be more compact than using JSON.stringify
@@ -15,25 +20,30 @@ export const urlSafeToBase64 = (base64: string) => base64.replace(/-/g, "+").rep
  *
  * const bitmasks = [1, 2, 3, 4, 5];
  * const packed = packBitmasks(bitmasks);
- * console.log(packed); // "AQIDBAU="
+ * console.log(packed); // "AAQIDBAU="
  */
 export function packBitmasks(bitmasks: number[], urlSafe = false): string {
-  if (!bitmasks?.length) {
-    return "";
-  }
+  if (!bitmasks?.length) return "";
 
-  const buffer = new ArrayBuffer(bitmasks.length * 4);
-  const uint32View = new Uint32Array(buffer);
+  const max = Math.max(...bitmasks);
+  const depth: BitDepth = max < 256 ? 8 : max < 65536 ? 16 : 32;
+  const bytesPerElement = depth >> 3;
+  const buffer = new ArrayBuffer(bitmasks.length * bytesPerElement);
+  const TypedArray = depth === 8 ? Uint8Array : depth === 16 ? Uint16Array : Uint32Array;
+  const view = new TypedArray(buffer).fill(0);
 
   for (let i = 0; i < bitmasks.length; i++) {
-    uint32View[i] = bitmasks[i];
+    view[i] = bitmasks[i];
   }
 
   const uint8View = new Uint8Array(buffer);
-  const binary = String.fromCharCode.apply(null, uint8View as unknown as number[]);
+  let binaryString = "";
+  for (let i = 0; i < uint8View.length; i++) {
+    binaryString += String.fromCharCode(uint8View[i]);
+  }
 
-  const base64String = btoa(binary);
-  return urlSafe ? base64ToUrlSafe(base64String) : base64String;
+  const base64 = prefixMap[depth] + btoa(binaryString);
+  return urlSafe ? base64ToUrlSafe(base64) : base64;
 }
 
 /**
@@ -46,31 +56,34 @@ export function packBitmasks(bitmasks: number[], urlSafe = false): string {
  *
  * @example
  *
- * const packed = "AQIDBAU=";
+ * const packed = "AAQIDBAU=";
  * const bitmasks = unpackBitmasks(packed);
  * console.log(bitmasks); // [1, 2, 3, 4, 5]
  */
 export function unpackBitmasks(packed: string, urlSafe = false): number[] {
+  if (!packed) return [];
+
   try {
-    const base64String = urlSafe ? urlSafeToBase64(packed) : packed;
-    const binary = atob(base64String);
+    const prefix = packed[0];
+    const base64String = urlSafe ? urlSafeToBase64(packed.substring(1)) : packed.substring(1);
+    const depth = reversePrefixMap[prefix];
 
-    const count = binary.length >>> 2;
-    const result = new Array(count).fill(0);
+    if (!depth) throw new Error("Invalid packed string: unknown prefix.");
 
-    for (let i = 0, offset = 0; i < count; i++, offset += 4) {
-      result[i] =
-        (
-          binary.charCodeAt(offset) |
-          (binary.charCodeAt(offset + 1) << 8) |
-          (binary.charCodeAt(offset + 2) << 16) |
-          (binary.charCodeAt(offset + 3) << 24)
-        ) >>> 0;
+    const binaryString = atob(base64String);
+    const buffer = new ArrayBuffer(binaryString.length);
+    const uint8View = new Uint8Array(buffer).fill(0);
+
+    for (let i = 0; i < binaryString.length; i++) {
+      uint8View[i] = binaryString.charCodeAt(i);
     }
 
-    return result;
+    const TypedArray = depth === 8 ? Uint8Array : depth === 16 ? Uint16Array : Uint32Array;
+    const finalView = new TypedArray(buffer);
+
+    return Array.from(finalView);
   } catch (e) {
-    console.error("Error unpacking bitmasks:", e);
+    console.error("Failed to unpack string:", e);
     return [];
   }
 }

@@ -41,6 +41,7 @@ describe("Pack/Unpack Bitmasks", () => {
 
     it("should handle undefined bitmasks in packBitmasks", () => {
 
+      // @ts-ignore
       const packed = packBitmasks(undefined);
 
       expect(packed).toBe("");
@@ -102,6 +103,36 @@ describe("Pack/Unpack Bitmasks", () => {
       expect(unpacked.length).toBe(bitmasks.length);
       expect(unpacked[0]).toBeTypeOf("number");
       expect(unpacked).toEqual(bitmasks);
+    });
+
+    it("should handle 8-bit depth (covers lines 14-17, 52)", () => {
+      // Test 8-bit depth: max value < 256
+      const bitmasks8bit = [0, 1, 127, 255];
+      const packed = packBitmasks(bitmasks8bit);
+      const unpacked = unpackBitmasks(packed);
+
+      expect(packed).toMatch(/^A/); // Should start with "A" prefix for 8-bit
+      expect(unpacked).toEqual(bitmasks8bit);
+    });
+
+    it("should handle 16-bit depth (covers lines 14-17, 52)", () => {
+      // Test 16-bit depth: max value >= 256 but < 65536
+      const bitmasks16bit = [0, 256, 1000, 65535];
+      const packed = packBitmasks(bitmasks16bit);
+      const unpacked = unpackBitmasks(packed);
+
+      expect(packed).toMatch(/^B/); // Should start with "B" prefix for 16-bit
+      expect(unpacked).toEqual(bitmasks16bit);
+    });
+
+    it("should handle 32-bit depth (covers lines 14-17, 52)", () => {
+      // Test 32-bit depth: max value >= 65536
+      const bitmasks32bit = [0, 65536, 1000000, 0xFFFFFFFF];
+      const packed = packBitmasks(bitmasks32bit);
+      const unpacked = unpackBitmasks(packed);
+
+      expect(packed).toMatch(/^C/); // Should start with "C" prefix for 32-bit
+      expect(unpacked).toEqual(bitmasks32bit);
     });
   });
 });

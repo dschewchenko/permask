@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createPermask } from "./";
 
 enum PermissionGroup {
@@ -16,7 +16,7 @@ describe("Permask", () => {
 
     it("should create a bitmask correctly", () => {
       const bitmask = permask.create({
-        group: PermissionGroup.POSTS,
+        group: "POSTS",
         read: true,
         create: false,
         delete: true,
@@ -30,6 +30,7 @@ describe("Permask", () => {
       const parsed = permask.parse(postsReadDeleteUpdate);
       expect(parsed).toEqual({
         group: PermissionGroup.POSTS,
+        groupName: "POSTS",
         read: true,
         create: false,
         delete: true,
@@ -55,18 +56,103 @@ describe("Permask", () => {
 
     it("should check read, create, delete, and update access", () => {
       const bitmask = permask.create({
-        group: PermissionGroup.LIKES,
+        group: "LIKES",
         read: true,
         create: true,
         delete: false,
         update: true
       });
 
-      expect(permask.hasGroup(bitmask, PermissionGroup.LIKES)).toBe(true);
+      expect(permask.hasGroup(bitmask, "LIKES")).toBe(true);
       expect(permask.canRead(bitmask)).toBe(true);
       expect(permask.canCreate(bitmask)).toBe(true);
       expect(permask.canDelete(bitmask)).toBe(false);
       expect(permask.canUpdate(bitmask)).toBe(true);
+    });
+
+    it("should check hasAccess method with group and access type", () => {
+      const bitmask = permask.create({
+        group: "COMMENTS",
+        read: true,
+        create: false,
+        delete: true,
+        update: false
+      });
+
+      // Test with string group names
+      expect(permask.hasAccess(bitmask, "COMMENTS", "read")).toBe(true);
+      expect(permask.hasAccess(bitmask, "COMMENTS", "create")).toBe(false);
+      expect(permask.hasAccess(bitmask, "COMMENTS", "delete")).toBe(true);
+      expect(permask.hasAccess(bitmask, "COMMENTS", "update")).toBe(false);
+
+      // Test with numeric group IDs
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, "read")).toBe(true);
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, "create")).toBe(false);
+
+      // Test with wrong group
+      expect(permask.hasAccess(bitmask, "POSTS", "read")).toBe(false);
+      expect(permask.hasAccess(bitmask, PermissionGroup.POSTS, "read")).toBe(false);
+    });
+
+    it("should handle non-existent group when creating bitmask", () => {
+      // Mock console.warn to verify it`s called
+      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+      const bitmask = permask.create({
+        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+        group: "NON_EXISTENT_GROUP" as any,
+        read: true,
+        create: true,
+        delete: false,
+        update: false
+      });
+
+      // Should return 0 for non-existent group
+      expect(bitmask).toBe(0);
+
+      // Restore console.warn
+      consoleSpy.mockRestore();
+    });
+
+    it("should return false when checking hasGroup with non-existent group", () => {
+      const bitmask = permask.create({
+        group: "POSTS",
+        read: true,
+        create: false,
+        delete: true,
+        update: false
+      });
+
+      // Test with non-existent string group name
+      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+            expect(permask.hasGroup(bitmask, "NON_EXISTENT_GROUP" as any)).toBe(false);
+
+      // Test with non-existent numeric group ID
+      expect(permask.hasGroup(bitmask, 999)).toBe(false);
+    });
+
+    it("should create bitmask with numeric group ID", () => {
+      // When group is passed as number instead of string
+      const bitmask = permask.create({
+        group: PermissionGroup.LIKES, // Pass numeric group ID directly
+        read: true,
+        create: false,
+        delete: true,
+        update: false
+      });
+
+      // Should create the same bitmask as using string group name
+      const expectedBitmask = permask.create({
+        group: "LIKES",
+        read: true,
+        create: false,
+        delete: true,
+        update: false
+      });
+
+      expect(bitmask).toBe(expectedBitmask);
+      expect(permask.hasGroup(bitmask, PermissionGroup.LIKES)).toBe(true);
+      expect(permask.hasGroup(bitmask, "LIKES")).toBe(true);
     });
   });
 });
