@@ -62,7 +62,7 @@ yarn add permask
 
 ## 🎮 Playground
 
-Try out `permask` interactively! [Live Demo](https://dschewchenko.github.io/permask/playground/)
+Try out `permask` interactively! [Live Demo](https://dschewchenko.github.io/permask/)
 
 
 ## How to use `permask`?
