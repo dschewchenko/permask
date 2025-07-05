@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/dschewchenko/permask/compare/v2.0.1...v2.1.0) (2025-07-05)
+
+
+### Features
+
+* release playground and DX improvements ([dc37415](https://github.com/dschewchenko/permask/commit/dc37415f369678ab03d6b0f3d2a0b6f5f89c5986))
+
 ## [2.0.1](https://github.com/dschewchenko/permask/compare/v2.0.0...v2.0.1) (2025-04-01)
 
 
