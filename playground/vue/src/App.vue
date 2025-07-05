@@ -1,19 +1,24 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { createPermask, PermissionAccess } from "permask";
+import {computed, ref} from "vue";
+import {createPermask} from "../../../src";
+import "highlight.js/styles/github.css";
 import PermissionTable from "./components/PermissionTable.vue";
 import CodePreview from "./components/CodePreview.vue";
 import GroupManager from "./components/GroupManager.vue";
+import OutputPreview from "./components/OutputPreview.vue";
+import AccessSimulator from "./components/AccessSimulator.vue";
 
 // Initialize with more specific domain-oriented groups
 const groups = ref({
   CONTENT_MANAGER: 1,
-  FINANCIAL_ANALYST: 2, 
+  FINANCIAL_ANALYST: 2,
   SUPPORT_AGENT: 3,
   PRODUCT_OWNER: 4,
   HR_SPECIALIST: 5,
   DATA_SCIENTIST: 6
 });
+
+type Groups = typeof groups.value;
 
 // Track permissions as an array of bitmasks
 const permissions = ref<number[]>([]);
@@ -24,22 +29,22 @@ const permask = computed(() => createPermask(groups.value));
 // Add a new permission to the array
 const addPermission = (groupKey: string, read: boolean, create: boolean, update: boolean, del: boolean) => {
   const group = groups.value[groupKey as keyof typeof groups.value];
-  
+
   if (group === undefined) return;
-  
+
   const bitmask = permask.value.create({
-    group,
+    group: group,
     read,
     create,
     update,
     delete: del
   });
-  
+
   // Replace existing permission for this group or add new one
-  const existingIndex = permissions.value.findIndex(p => 
+  const existingIndex = permissions.value.findIndex(p =>
     permask.value.hasGroup(p, group)
   );
-  
+
   if (existingIndex >= 0) {
     permissions.value[existingIndex] = bitmask;
   } else {
@@ -53,9 +58,9 @@ const updatePermissions = (updatedPermissions: number[]) => {
 };
 
 // Handle updates to group definitions
-const updateGroups = (updatedGroups: Record<string, number>) => {
-  groups.value = updatedGroups;
-  
+const updateGroups = (updatedGroups: Groups | Record<string, number>) => {
+  groups.value = updatedGroups as Groups;
+
   // Filter out permissions for groups that no longer exist
   permissions.value = permissions.value.filter(p => {
     const group = permask.value.getGroupName(p);
@@ -80,8 +85,8 @@ const exportConfig = () => {
       };
     })
   };
-  
-  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
+
+  const blob = new Blob([JSON.stringify(config, null, 2)], {type: "application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -97,25 +102,25 @@ const importConfig = () => {
   const input = document.createElement("input");
   input.type = "file";
   input.accept = "application/json";
-  
+
   input.onchange = (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const config = JSON.parse(e.target?.result as string);
-        
+
         if (config.groups && typeof config.groups === 'object') {
           groups.value = config.groups;
         }
-        
+
         if (config.permissions && Array.isArray(config.permissions)) {
           // Handle two possible formats:
           // 1. Array of numbers (just bitmasks)
           // 2. Array of objects with bitmask property
-          permissions.value = config.permissions.map(p => 
+          permissions.value = config.permissions.map(p =>
             typeof p === 'number' ? p : (p.bitmask || 0)
           );
         }
@@ -124,10 +129,10 @@ const importConfig = () => {
         console.error(err);
       }
     };
-    
+
     reader.readAsText(file);
   };
-  
+
   input.click();
 };
 </script>
@@ -137,13 +142,13 @@ const importConfig = () => {
     <header class="flex justify-between items-center mb-8 pb-5 border-b border-gray-200">
       <h1 class="text-2xl font-bold text-gray-800">Permask Playground</h1>
       <div class="actions flex gap-2">
-        <button 
+        <button
           @click="importConfig"
           class="bg-gray-600 hover:bg-gray-700 text-white py-2 px-4 rounded font-medium transition-colors"
         >
           Import Config
         </button>
-        <button 
+        <button
           @click="exportConfig"
           class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded font-medium transition-colors"
         >
@@ -151,31 +156,48 @@ const importConfig = () => {
         </button>
       </div>
     </header>
-    
+
     <main class="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Group Configuration</h2>
-        <GroupManager 
-          :groups="groups" 
-          @update-groups="updateGroups" 
+        <GroupManager
+          :groups="groups"
+          @update-groups="updateGroups"
         />
       </section>
-      
+
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Permission Configuration</h2>
-        <PermissionTable 
-          :groups="groups" 
-          :permissions="permissions" 
+        <PermissionTable
+          :groups="groups"
+          :permissions="permissions"
           :permask="permask"
           @update-permissions="updatePermissions"
           @add-permission="addPermission"
         />
       </section>
-      
+
+      <section class="bg-gray-50 rounded-lg p-3 shadow-sm lg:col-span-2">
+        <h2 class="text-lg font-semibold text-gray-700 mt-0 mb-2">Result (Live Output)</h2>
+        <OutputPreview
+          :permissions="permissions"
+          :permask="permask"
+        />
+      </section>
+
+      <section class="bg-gray-50 rounded-lg p-5 shadow-sm lg:col-span-2">
+        <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Access Simulator</h2>
+        <AccessSimulator
+          :groups="groups"
+          :permissions="permissions"
+          :permask="permask"
+        />
+      </section>
+
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Code Preview</h2>
-        <CodePreview 
-          :groups="groups" 
+        <CodePreview
+          :groups="groups"
           :permissions="permissions"
           :permask="permask"
         />

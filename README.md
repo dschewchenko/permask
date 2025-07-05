@@ -60,6 +60,11 @@ yarn add permask
 ```
 
 
+## 🎮 Playground
+
+Try out `permask` interactively! [Live Demo](https://dschewchenko.github.io/permask/playground/)
+
+
 ## How to use `permask`?
 
 ### 1. Define groups of permissions:
@@ -89,7 +94,7 @@ const permask = createPermask(PermissionGroup);
 - #### create a bitmask from an object:
 ```ts
 const bitmask2 = permask.create({
-  group: GroupEnum.LIKE,
+  group: "LIKE",
   read: true,
   create: false,
   update: true,
@@ -101,14 +106,24 @@ console.log(bitmask2); // 53 (0b110101)
 - #### parse a bitmask to an object:
 ```ts
 const parsed = permask.parse(31); // 0b11111
-console.log(parsed); // { group: 1, read: true, create: true, update: true, delete: true }
+console.log(parsed);
+// {
+//   group: 1,
+//   groupName: "POST",
+//   read: true,
+//   create: true,
+//   update: true,
+//   delete: true
+// }
 ```
 
 - #### check if a bitmask has a specific group:
 
 ```ts
-const hasGroup = permask.hasGroup(23, PermissionGroup.LIKE);
+const hasGroup = permask.hasGroup(23, "LIKE");
 console.log(hasGroup); // true
+// You can also use numeric group IDs
+const hasGroupById = permask.hasGroup(23, PermissionGroup.LIKE);
 ```
 
 - #### check if a bitmask has a specific permission:
@@ -118,6 +133,21 @@ const canCreate = permask.canCreate(17);
 const canDelete = permask.canDelete(17);
 const canUpdate = permask.canUpdate(17);
 console.log(canRead, canCreate, canDelete, canUpdate); // true, false, false, false
+```
+
+- #### check if a bitmask has access to a specific group and permission:
+```ts
+// Check if bitmask has read access to LIKE group
+const hasReadAccess = permask.hasAccess(53, "LIKE", "read");
+console.log(hasReadAccess); // true
+
+// Check if bitmask has create access to LIKE group
+const hasCreateAccess = permask.hasAccess(53, "LIKE", "create");
+console.log(hasCreateAccess); // false
+
+// You can also use numeric group IDs
+const hasAccessById = permask.hasAccess(53, PermissionGroup.LIKE, "update");
+console.log(hasAccessById); // true
 ```
 
 - #### get group name from bitmask:
@@ -144,6 +174,7 @@ You can use `permask` just with bitmask utility functions.
 - `getPermissionAccess(bitmask: number): number` - returns an access number from a bitmask.
 - `hasPermissionGroup(bitmask: number, group: number): boolean` - checks if a bitmask has a specific group.
 - `hasPermissionAccess(bitmask: number, access: number): boolean` - checks if a bitmask has a specific access.
+- `hasRequiredPermission(bitmasks: number[], group: number, access: number): boolean` - checks if any bitmask in the array has the required permission for the specified group and access.
 
   useful functions:
   - `canRead(bitmask: number): boolean`
@@ -174,6 +205,7 @@ You can use `permask` just with bitmask utility functions.
       READ: 0b0001   // read-only
   } as const;
   ```
+
 
 ## [Integration with frameworks](https://github.com/dschewchenko/permask/blob/main/integrations/README.md)
 

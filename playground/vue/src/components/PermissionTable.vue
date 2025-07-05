@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
-import { PermissionAccess } from "permask";
+import { PermissionAccess } from "../../../../src";
 
 // Props
 const props = defineProps<{
@@ -18,12 +18,12 @@ const emit = defineEmits<{
 // Calculate the current permissions state as a more convenient format for rendering
 const permissionsMap = computed(() => {
   const map: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
-  
+
   // Initialize with default values (all false) for each group
   Object.keys(props.groups).forEach(groupKey => {
     map[groupKey] = { read: false, create: false, update: false, delete: false };
   });
-  
+
   // Update with actual values from permissions
   props.permissions.forEach(bitmask => {
     const groupName = props.permask.getGroupName(bitmask);
@@ -37,7 +37,7 @@ const permissionsMap = computed(() => {
       };
     }
   });
-  
+
   return map;
 });
 
@@ -45,12 +45,12 @@ const permissionsMap = computed(() => {
 const updatePermission = (groupKey: string, permission: "read" | "create" | "update" | "delete", value: boolean) => {
   const currentPerms = { ...permissionsMap.value[groupKey] };
   currentPerms[permission] = value;
-  
-  emit("add-permission", 
-    groupKey, 
-    currentPerms.read, 
-    currentPerms.create, 
-    currentPerms.update, 
+
+  emit("add-permission",
+    groupKey,
+    currentPerms.read,
+    currentPerms.create,
+    currentPerms.update,
     currentPerms.delete
   );
 };
@@ -74,40 +74,40 @@ watch(() => props.groups, () => {
         </tr>
       </thead>
       <tbody>
-        <tr 
-          v-for="(groupValue, groupKey) in groups" 
+        <tr
+          v-for="(groupValue, groupKey) in groups"
           :key="groupKey"
           class="hover:bg-gray-50 border-b border-gray-200"
         >
           <td class="p-3 font-medium">{{ groupKey }}</td>
           <td class="p-3 text-center">
-            <input 
-              type="checkbox" 
-              :checked="permissionsMap[groupKey]?.read" 
+            <input
+              type="checkbox"
+              :checked="permissionsMap[groupKey]?.read"
               @change="updatePermission(groupKey, 'read', $event.target.checked)"
               class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
           <td class="p-3 text-center">
-            <input 
-              type="checkbox" 
-              :checked="permissionsMap[groupKey]?.create" 
+            <input
+              type="checkbox"
+              :checked="permissionsMap[groupKey]?.create"
               @change="updatePermission(groupKey, 'create', $event.target.checked)"
               class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
           <td class="p-3 text-center">
-            <input 
-              type="checkbox" 
-              :checked="permissionsMap[groupKey]?.update" 
-              @change="updatePermission(groupKey, 'update', $event.target.checked)" 
+            <input
+              type="checkbox"
+              :checked="permissionsMap[groupKey]?.update"
+              @change="updatePermission(groupKey, 'update', $event.target.checked)"
               class="w-4 h-4 cursor-pointer accent-blue-600"
             />
           </td>
           <td class="p-3 text-center">
-            <input 
-              type="checkbox" 
-              :checked="permissionsMap[groupKey]?.delete" 
+            <input
+              type="checkbox"
+              :checked="permissionsMap[groupKey]?.delete"
               @change="updatePermission(groupKey, 'delete', $event.target.checked)"
               class="w-4 h-4 cursor-pointer accent-blue-600"
             />
