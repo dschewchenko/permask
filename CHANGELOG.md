@@ -3,7 +3,17 @@
 
 ### Features
 
-* release playground and DX improvements ([dc37415](https://github.com/dschewchenko/permask/commit/dc37415f369678ab03d6b0f3d2a0b6f5f89c5986))
+* improve API with string group names and new helpers ([dc37415](https://github.com/dschewchenko/permask/commit/dc37415f369678ab03d6b0f3d2a0b6f5f89c5986))=
+
+You can now use string names for permission groups in `create()` and `hasGroup()` for an easier development experience. This change is fully backward-compatible, so numeric IDs still work.
+
+- The `parse()` method now includes `groupName` in its output.
+- Added `hasAccess()` to check group permissions in a single call.
+- Added `getGroupName()` to find a group's name from a bitmask.
+
+The playground and tests have been updated to use these new features.
+For more details, see the project on GitHub: https://github.com/dschewchenko/permask/
+
 
 ## [2.0.1](https://github.com/dschewchenko/permask/compare/v2.0.0...v2.0.1) (2025-04-01)
 
