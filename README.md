@@ -137,17 +137,23 @@ console.log(canRead, canCreate, canDelete, canUpdate); // true, false, false, fa
 
 - #### check if a bitmask has access to a specific group and permission:
 ```ts
-// Check if bitmask has read access to LIKE group
+import { PermissionAccess } from "permask";
+
+// Check if bitmask has read access to LIKE group using string access
 const hasReadAccess = permask.hasAccess(53, "LIKE", "read");
 console.log(hasReadAccess); // true
 
-// Check if bitmask has create access to LIKE group
+// Check if bitmask has create access to LIKE group using string access
 const hasCreateAccess = permask.hasAccess(53, "LIKE", "create");
 console.log(hasCreateAccess); // false
 
-// You can also use numeric group IDs
+// You can also use numeric group IDs with string access
 const hasAccessById = permask.hasAccess(53, PermissionGroup.LIKE, "update");
 console.log(hasAccessById); // true
+
+// You can use numeric access values (PermissionAccess) instead of strings
+const hasUpdateAccessNumeric = permask.hasAccess(53, PermissionGroup.LIKE, PermissionAccess.UPDATE);
+console.log(hasUpdateAccessNumeric); // true
 ```
 
 - #### get group name from bitmask:

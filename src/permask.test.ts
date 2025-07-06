@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { createPermask } from "./";
+import { PermissionAccess } from "./constants/permission";
 
 enum PermissionGroup {
   POSTS = 1,
@@ -79,19 +80,33 @@ describe("Permask", () => {
         update: false
       });
 
-      // Test with string group names
+      // Test with string group names and string access
       expect(permask.hasAccess(bitmask, "COMMENTS", "read")).toBe(true);
       expect(permask.hasAccess(bitmask, "COMMENTS", "create")).toBe(false);
       expect(permask.hasAccess(bitmask, "COMMENTS", "delete")).toBe(true);
       expect(permask.hasAccess(bitmask, "COMMENTS", "update")).toBe(false);
 
-      // Test with numeric group IDs
+      // Test with numeric group IDs and string access
       expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, "read")).toBe(true);
       expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, "create")).toBe(false);
+
+      // Test with string group names and numeric access (PermissionAccessBits)
+      expect(permask.hasAccess(bitmask, "COMMENTS", PermissionAccess.READ)).toBe(true);
+      expect(permask.hasAccess(bitmask, "COMMENTS", PermissionAccess.CREATE)).toBe(false);
+      expect(permask.hasAccess(bitmask, "COMMENTS", PermissionAccess.DELETE)).toBe(true);
+      expect(permask.hasAccess(bitmask, "COMMENTS", PermissionAccess.UPDATE)).toBe(false);
+
+      // Test with numeric group IDs and numeric access (PermissionAccessBits)
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, PermissionAccess.READ)).toBe(true);
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, PermissionAccess.CREATE)).toBe(false);
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, PermissionAccess.DELETE)).toBe(true);
+      expect(permask.hasAccess(bitmask, PermissionGroup.COMMENTS, PermissionAccess.UPDATE)).toBe(false);
 
       // Test with wrong group
       expect(permask.hasAccess(bitmask, "POSTS", "read")).toBe(false);
       expect(permask.hasAccess(bitmask, PermissionGroup.POSTS, "read")).toBe(false);
+      expect(permask.hasAccess(bitmask, "POSTS", PermissionAccess.READ)).toBe(false);
+      expect(permask.hasAccess(bitmask, PermissionGroup.POSTS, PermissionAccess.READ)).toBe(false);
     });
 
     it("should handle non-existent group when creating bitmask", () => {

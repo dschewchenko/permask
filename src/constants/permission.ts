@@ -9,6 +9,7 @@ export const PermissionAccess = {
 } as const;
 
 export type PermissionAccessType = keyof typeof PermissionAccess;
+export type PermissionAccessBits = typeof PermissionAccess[PermissionAccessType];
 
 /**
  * Predefined permission access bitmasks.
