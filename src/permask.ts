@@ -10,7 +10,7 @@ import {
   hasPermissionGroup,
   parseBitmask
 } from "./utils/bitmask";
-import {PermissionAccess, type PermissionAccessType} from "./constants/permission";
+import {PermissionAccess, PermissionAccessBits, type PermissionAccessType} from "./constants/permission";
 
 type CreateConfig<T> = Omit<Parameters<typeof createBitmask>[0], "group"> & { group: T | number };
 
@@ -50,12 +50,14 @@ export function createPermask<
   /**
    * Has access to group
    */
-  function hasAccess<Bitmask extends number>(bitmask: Bitmask, group: GroupNames | number, access: Lowercase<PermissionAccessType>): boolean {
+  function hasAccess<Bitmask extends number>(bitmask: Bitmask, group: GroupNames | number, access:  Lowercase<PermissionAccessType> | PermissionAccessBits): boolean {
     if (!hasGroup(bitmask, group)) {
       return false;
     }
 
-    return hasPermissionAccess(bitmask, PermissionAccess[access.toUpperCase() as PermissionAccessType]);
+    const accessValue = typeof access === "string" ? PermissionAccess[access.toUpperCase() as PermissionAccessType] : access;
+
+    return hasPermissionAccess(bitmask, accessValue);
   }
 
   /**
