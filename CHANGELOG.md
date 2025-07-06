@@ -1,3 +1,10 @@
+## [2.1.1](https://github.com/dschewchenko/permask/compare/v2.1.0...v2.1.1) (2025-07-06)
+
+
+### Bug Fixes
+
+* add number support for access permission in hasAccess method ([#29](https://github.com/dschewchenko/permask/issues/29)) ([6d0d962](https://github.com/dschewchenko/permask/commit/6d0d962f3d703a025c9f2f52ad3df047351c18c4))
+
 # [2.1.0](https://github.com/dschewchenko/permask/compare/v2.0.1...v2.1.0) (2025-07-05)
 
 

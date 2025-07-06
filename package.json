@@ -1,6 +1,6 @@
 {
   "name": "permask",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "type": "module",
   "description": "A lightweight utility library for managing permission bitmasks with groups and access levels",
   "main": "./dist/permask.cjs",
