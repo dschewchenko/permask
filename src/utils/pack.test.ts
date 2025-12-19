@@ -1,5 +1,5 @@
-import {beforeAll, describe, expect, it } from "vitest";
-import { packBitmasks, unpackBitmasks } from "../"
+import { beforeAll, describe, expect, it } from "vitest";
+import { packBitmasks, unpackBitmasks } from "../";
 
 const generateBitmasks = () => {
   const bitmasks = new Set<number>();
@@ -7,10 +7,10 @@ const generateBitmasks = () => {
   // Add some key test cases
   bitmasks.add(0);
   bitmasks.add(1);
-  bitmasks.add(0xFF);       // 8 bits
-  bitmasks.add(0xFFFF);     // 16 bits
-  bitmasks.add(0xFFFFFF);   // 24 bits
-  bitmasks.add(0xFFFFFFFF); // 32 bits
+  bitmasks.add(0xff); // 8 bits
+  bitmasks.add(0xffff); // 16 bits
+  bitmasks.add(0xffffff); // 24 bits
+  bitmasks.add(0xffffffff); // 32 bits
 
   for (let i = 0; i < 31; i++) {
     bitmasks.add(1 << i);
@@ -18,11 +18,11 @@ const generateBitmasks = () => {
 
   bitmasks.add(0x12345678);
   bitmasks.add(0x55555555);
-  bitmasks.add(0xAAAAAAAA);
+  bitmasks.add(0xaaaaaaaa);
   bitmasks.add(0x33333333);
-  bitmasks.add(0xCCCCCCCC);
+  bitmasks.add(0xcccccccc);
 
-  return Array.from(bitmasks)
+  return Array.from(bitmasks);
 };
 
 describe("Pack/Unpack Bitmasks", () => {
@@ -40,8 +40,7 @@ describe("Pack/Unpack Bitmasks", () => {
     });
 
     it("should handle undefined bitmasks in packBitmasks", () => {
-
-      // @ts-ignore
+      // @ts-expect-error
       const packed = packBitmasks(undefined);
 
       expect(packed).toBe("");
@@ -69,14 +68,10 @@ describe("Pack/Unpack Bitmasks", () => {
   describe("unpackBitmasks", () => {
     it("should handle invalid base64", () => {
       const invalid = "!!!invalid-base64!!!";
-      const result = unpackBitmasks(invalid);
-
-      expect(result).toEqual([]);
+      expect(() => unpackBitmasks(invalid)).toThrow();
 
       // Also test with urlSafe=true
-      const resultUrlSafe = unpackBitmasks(invalid, true);
-
-      expect(resultUrlSafe).toEqual([]);
+      expect(() => unpackBitmasks(invalid, true)).toThrow();
     });
 
     it("should handle empty string in unpackBitmasks", () => {
@@ -127,7 +122,7 @@ describe("Pack/Unpack Bitmasks", () => {
 
     it("should handle 32-bit depth (covers lines 14-17, 52)", () => {
       // Test 32-bit depth: max value >= 65536
-      const bitmasks32bit = [0, 65536, 1000000, 0xFFFFFFFF];
+      const bitmasks32bit = [0, 65536, 1000000, 0xffffffff];
       const packed = packBitmasks(bitmasks32bit);
       const unpacked = unpackBitmasks(packed);
 

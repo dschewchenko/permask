@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
-import { defaultPermaskMiddlewareOptions, permaskExpress } from "./";
+import { defaultPermaskExpressOptions, permaskExpress } from "./";
 
 const groups = {
   POSTS: 1,
@@ -72,7 +72,7 @@ describe("permask Express Middleware", () => {
 
   it("should return 500 if an error occurs during permission checking", () => {
     const checkPermission = permaskExpress(groups, {
-      ...defaultPermaskMiddlewareOptions,
+      ...defaultPermaskExpressOptions,
       getPermissions: () => {
         throw new Error("Test error"); // Емітуємо помилку
       }
@@ -87,6 +87,94 @@ describe("permask Express Middleware", () => {
     expect(res.json).toHaveBeenCalledWith({
       error: "Internal server error",
       details: "Test error"
+    });
+  });
+
+  it("should support async getPermissions (allow)", async () => {
+    const checkPermission = permaskExpress(groups, {
+      ...defaultPermaskExpressOptions,
+      getPermissions: async () => [createBitmask({ group: groups.POSTS, read: true })]
+    });
+
+    const req = mockRequest([]);
+    const res = mockResponse();
+
+    checkPermission(groups.POSTS, PermissionAccess.READ)(req, res, mockNext);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockNext).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+    expect(res.json).not.toHaveBeenCalled();
+  });
+
+  it("should return 500 when async getPermissions rejects", async () => {
+    const checkPermission = permaskExpress(groups, {
+      ...defaultPermaskExpressOptions,
+      getPermissions: async () => {
+        throw new Error("Async error");
+      }
+    });
+
+    const req = mockRequest([]);
+    const res = mockResponse();
+
+    checkPermission(groups.POSTS, PermissionAccess.READ)(req, res, mockNext);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockNext).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Internal server error",
+      details: "Async error"
+    });
+  });
+
+  it("should return 500 when forbiddenResponse throws", () => {
+    const checkPermission = permaskExpress(groups, {
+      ...defaultPermaskExpressOptions,
+      forbiddenResponse: () => {
+        throw new Error("Forbidden error");
+      }
+    });
+
+    const req = mockRequest([]);
+    const res = mockResponse();
+
+    checkPermission(groups.POSTS, PermissionAccess.READ)(req, res, mockNext);
+
+    expect(mockNext).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Internal server error",
+      details: "Forbidden error"
+    });
+  });
+
+  it("should return 500 when forbiddenResponse promise rejects", async () => {
+    const checkPermission = permaskExpress(groups, {
+      ...defaultPermaskExpressOptions,
+      forbiddenResponse: async () => {
+        throw new Error("Forbidden async error");
+      }
+    });
+
+    const req = mockRequest([]);
+    const res = mockResponse();
+
+    checkPermission(groups.POSTS, PermissionAccess.READ)(req, res, mockNext);
+
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(mockNext).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith({
+      error: "Internal server error",
+      details: "Forbidden async error"
     });
   });
 });
