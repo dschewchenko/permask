@@ -1,4 +1,6 @@
-import type {EnumOrObjectType, StringKeysType} from "./types/utils";
+import { PermissionAccess, type PermissionAccessBits, type PermissionAccessType } from "./constants/permission";
+import { PermaskError } from "./errors";
+import type { EnumOrObjectType, StringKeysType } from "./types/utils";
 import {
   canCreate,
   canDelete,
@@ -10,9 +12,24 @@ import {
   hasPermissionGroup,
   parseBitmask
 } from "./utils/bitmask";
-import {PermissionAccess, PermissionAccessBits, type PermissionAccessType} from "./constants/permission";
 
 type CreateConfig<T> = Omit<Parameters<typeof createBitmask>[0], "group"> & { group: T | number };
+
+type PermaskInstance<GroupNames extends string> = {
+  create: (config: CreateConfig<GroupNames>) => number;
+  parse: (bitmask: number) => ReturnType<typeof parseBitmask> & { groupName: GroupNames | undefined };
+  hasGroup: <Bitmask extends number>(bitmask: Bitmask, group: GroupNames | number) => boolean;
+  getGroupName: <Bitmask extends number>(bitmask: Bitmask) => GroupNames | undefined;
+  hasAccess: <Bitmask extends number>(
+    bitmask: Bitmask,
+    group: GroupNames | number,
+    access: Lowercase<PermissionAccessType> | PermissionAccessBits
+  ) => boolean;
+  canRead: typeof canRead;
+  canCreate: typeof canCreate;
+  canDelete: typeof canDelete;
+  canUpdate: typeof canUpdate;
+};
 
 /**
  * Construct bitmask functions with defined permission groups.
@@ -21,7 +38,7 @@ export function createPermask<
   Groups extends Record<string, number | string>,
   EnumOrObj extends EnumOrObjectType<Groups>,
   GroupNames extends StringKeysType<EnumOrObj> = StringKeysType<EnumOrObj>
->(groups: Groups) {
+>(groups: Groups): PermaskInstance<GroupNames> {
   const groupEntries = Object.entries(groups).filter(([, value]) => typeof value === "number") as [
     GroupNames,
     number
@@ -50,12 +67,17 @@ export function createPermask<
   /**
    * Has access to group
    */
-  function hasAccess<Bitmask extends number>(bitmask: Bitmask, group: GroupNames | number, access:  Lowercase<PermissionAccessType> | PermissionAccessBits): boolean {
+  function hasAccess<Bitmask extends number>(
+    bitmask: Bitmask,
+    group: GroupNames | number,
+    access: Lowercase<PermissionAccessType> | PermissionAccessBits
+  ): boolean {
     if (!hasGroup(bitmask, group)) {
       return false;
     }
 
-    const accessValue = typeof access === "string" ? PermissionAccess[access.toUpperCase() as PermissionAccessType] : access;
+    const accessValue =
+      typeof access === "string" ? PermissionAccess[access.toUpperCase() as PermissionAccessType] : access;
 
     return hasPermissionAccess(bitmask, accessValue);
   }
@@ -68,13 +90,16 @@ export function createPermask<
     let groupId = groupMap.get(config.group as GroupNames);
 
     if (groupId === undefined) {
-      if (!reverseGroupMap.has(config.group as unknown as number)) {
-        return 0;
+      const numericGroupId = config.group as unknown as number;
+
+      if (!reverseGroupMap.has(numericGroupId)) {
+        throw new PermaskError("UNKNOWN_GROUP", `Unknown permission group: ${String(config.group)}`);
       }
-      groupId = config.group as unknown as number;
+
+      groupId = numericGroupId;
     }
 
-    return createBitmask({...config, group: groupId});
+    return createBitmask({ ...config, group: groupId });
   }
 
   /**
@@ -89,7 +114,6 @@ export function createPermask<
       groupName
     };
   }
-
 
   return {
     create,

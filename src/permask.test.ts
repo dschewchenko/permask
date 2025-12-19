@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { createPermask } from "./";
+import { describe, expect, it } from "vitest";
+import { createPermask, PermaskError } from "./";
 import { PermissionAccess } from "./constants/permission";
 
 enum PermissionGroup {
@@ -110,23 +110,16 @@ describe("Permask", () => {
     });
 
     it("should handle non-existent group when creating bitmask", () => {
-      // Mock console.warn to verify it`s called
-      const consoleSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
-
-      const bitmask = permask.create({
-        // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-        group: "NON_EXISTENT_GROUP" as any,
-        read: true,
-        create: true,
-        delete: false,
-        update: false
-      });
-
-      // Should return 0 for non-existent group
-      expect(bitmask).toBe(0);
-
-      // Restore console.warn
-      consoleSpy.mockRestore();
+      expect(() =>
+        permask.create({
+          // biome-ignore lint/suspicious/noExplicitAny: intentional invalid group for test case
+          group: "NON_EXISTENT_GROUP" as any,
+          read: true,
+          create: true,
+          delete: false,
+          update: false
+        })
+      ).toThrowError(PermaskError);
     });
 
     it("should return false when checking hasGroup with non-existent group", () => {
@@ -139,8 +132,8 @@ describe("Permask", () => {
       });
 
       // Test with non-existent string group name
-      // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-            expect(permask.hasGroup(bitmask, "NON_EXISTENT_GROUP" as any)).toBe(false);
+      // biome-ignore lint/suspicious/noExplicitAny: intentional invalid group for test case
+      expect(permask.hasGroup(bitmask, "NON_EXISTENT_GROUP" as any)).toBe(false);
 
       // Test with non-existent numeric group ID
       expect(permask.hasGroup(bitmask, 999)).toBe(false);

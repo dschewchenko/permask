@@ -3,9 +3,9 @@ import { PermissionAccess } from "../constants/permission";
 
 /**
  * Permission mask:
- * - 3 bits for access
+ * - 4 bits for access
  * - any number of bits for group
- * {group(0,...)}{access(3)}
+ * {group(0,...)}{access(4)}
  */
 
 /**
@@ -13,7 +13,7 @@ import { PermissionAccess } from "../constants/permission";
  * Use to override access.
  */
 export function setPermissionAccess(bitmask: number, access: number) {
-  return (bitmask & ~ACCESS_MASK) | access;
+  return ((bitmask & ~ACCESS_MASK) | (access & ACCESS_MASK)) >>> 0;
 }
 
 /**
@@ -21,7 +21,28 @@ export function setPermissionAccess(bitmask: number, access: number) {
  * Will not override existing access.
  */
 export function addPermissionAccess(bitmask: number, access: number) {
-  return bitmask | access;
+  return (bitmask | (access & ACCESS_MASK)) >>> 0;
+}
+
+/**
+ * Remove permission access from bitmask.
+ */
+export function removePermissionAccess(bitmask: number, access: number) {
+  return (bitmask & ~(access & ACCESS_MASK)) >>> 0;
+}
+
+/**
+ * Toggle permission access in bitmask.
+ */
+export function togglePermissionAccess(bitmask: number, access: number) {
+  return (bitmask ^ (access & ACCESS_MASK)) >>> 0;
+}
+
+/**
+ * Clear all access bits in bitmask (keeps group bits).
+ */
+export function clearPermissionAccess(bitmask: number) {
+  return (bitmask & ~ACCESS_MASK) >>> 0;
 }
 
 /**
@@ -29,14 +50,14 @@ export function addPermissionAccess(bitmask: number, access: number) {
  * Use to override group.
  */
 export function setPermissionGroup(bitmask: number, group: number) {
-  return getPermissionAccess(bitmask) | (group << ACCESS_BITS);
+  return (getPermissionAccess(bitmask) | (group << ACCESS_BITS)) >>> 0;
 }
 
 /**
  * Get permission group from mask.
  */
 export function getPermissionGroup(bitmask: number): number {
-  return bitmask >> ACCESS_BITS;
+  return bitmask >>> ACCESS_BITS;
 }
 
 /**
@@ -57,14 +78,22 @@ export function hasPermissionGroup(bitmask: number, group: number) {
  * Check if permission bitmask has given access.
  */
 export function hasPermissionAccess(bitmask: number, access: number) {
-  return (getPermissionAccess(bitmask) & access) !== 0;
+  return (getPermissionAccess(bitmask) & (access & ACCESS_MASK)) !== 0;
+}
+
+/**
+ * Check if permission bitmask has all given access flags (not just any).
+ */
+export function hasAllPermissionAccess(bitmask: number, access: number) {
+  const maskedAccess = access & ACCESS_MASK;
+  return (getPermissionAccess(bitmask) & maskedAccess) === maskedAccess;
 }
 
 /**
  * Get permission bitmask from given group and access. {group(1,...)}{access(010)}
  */
 export function getPermissionBitmask(group: number, access: number) {
-  return (group << ACCESS_BITS) | access;
+  return ((group << ACCESS_BITS) | (access & ACCESS_MASK)) >>> 0;
 }
 
 /**
@@ -146,5 +175,5 @@ export function createBitmask({
   if (update) bitmask = addPermissionAccess(bitmask, PermissionAccess.UPDATE);
   bitmask = setPermissionGroup(bitmask, group);
 
-  return bitmask;
+  return bitmask >>> 0;
 }

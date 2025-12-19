@@ -1,10 +1,7 @@
 {
-  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
   "files": {
-    "ignore": [
-      "packages/*/dist/**",
-      "packages/*/node_modules/**"
-    ]
+    "includes": ["**", "!**/coverage", "!**/dist", "!**/node_modules", "!**/playground"]
   },
   "formatter": {
     "enabled": true,
@@ -15,7 +12,13 @@
     "lineWidth": 120,
     "attributePosition": "auto"
   },
-  "organizeImports": { "enabled": true },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "linter": { "enabled": true, "rules": { "recommended": true } },
   "javascript": {
     "formatter": {
