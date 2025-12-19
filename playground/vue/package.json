@@ -3,22 +3,23 @@
   "version": "0.0.1",
   "private": true,
   "type": "module",
+  "packageManager": "bun@1.3.1",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "bunx vite",
+    "build": "bunx vite build",
+    "preview": "bunx vite preview"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.1.11",
+    "@tailwindcss/vite": "^4.1.18",
     "highlight.js": "^11.11.1",
     "permask": "file:../../",
-    "tailwindcss": "^4.1.11",
-    "vue": "^3.5.17"
+    "tailwindcss": "^4.1.18",
+    "vue": "^3.5.25"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^6.0.0",
-    "@vue/tsconfig": "^0.7.0",
-    "typescript": "^5.8.3",
-    "vite": "^7.0.2"
+    "@vitejs/plugin-vue": "^6.0.3",
+    "@vue/tsconfig": "^0.8.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.0"
   }
 }

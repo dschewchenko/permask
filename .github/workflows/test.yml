@@ -1,5 +1,9 @@
 name: Test
+
 on:
+  push:
+    branches:
+      - main
   pull_request:
     branches:
       - main
@@ -8,9 +12,6 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [ 22 ]
 
     permissions:
       # Required to checkout the code
@@ -20,19 +21,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
         with:
-          version: 10
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+          bun-version: "1.3.1"
+
+      - name: Use cache
+        uses: actions/cache@v4
         with:
-          node-version: ${{ matrix.node-version }}
-          cache: 'pnpm'
+          path: |
+            ~/.bun/install/cache
+            node_modules
+            */*/node_modules
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: pnpm install
+        run: bun install --frozen-lockfile
+
       - name: 'Test'
-        run: pnpm test:coverage
+        run: bun run test:coverage
       - name: 'Report Coverage'
         if: always() # Also generate the report if tests are failing
         uses:  davelosert/vitest-coverage-report-action@v2
