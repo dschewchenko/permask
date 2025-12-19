@@ -17,7 +17,7 @@ For example in UNIX file systems, bitmasks are used to manage file permissions (
 - Fast: Bitwise operations (&, |) are faster than comparing strings.
 - Compact: Combine multiple permissions in a single integer (e.g., 0b1111 for read, create, update, delete).
   Just 4 bits for access control. For groups, you can use any number of bits,
-- Flexible: Easy to check, add, or remove permissions.
+- Flexible: Easy to check, add or remove permissions.
 
 Example of using bitmasks:
 
@@ -51,6 +51,8 @@ Group(1)  Permissions(read, create, update)
 Install `permask`:
 
 ```bash
+# bun
+bun add permask
 # npm
 npm install permask
 # pnpm
@@ -93,20 +95,18 @@ const permask = createPermask(PermissionGroup);
 
 - #### create a bitmask from an object:
 ```ts
-const bitmask2 = permask.create({
+console.log(permask.create({
   group: "LIKE",
   read: true,
   create: false,
   update: true,
   delete: false
-});
-console.log(bitmask2); // 53 (0b110101)
+})); // 53 (0b110101)
 ```
 
 - #### parse a bitmask to an object:
 ```ts
-const parsed = permask.parse(31); // 0b11111
-console.log(parsed);
+console.log(permask.parse(31)); // 0b11111
 // {
 //   group: 1,
 //   groupName: "POST",
@@ -120,19 +120,19 @@ console.log(parsed);
 - #### check if a bitmask has a specific group:
 
 ```ts
-const hasGroup = permask.hasGroup(23, "LIKE");
-console.log(hasGroup); // true
+console.log(permask.hasGroup(23, "LIKE")); // true
 // You can also use numeric group IDs
 const hasGroupById = permask.hasGroup(23, PermissionGroup.LIKE);
 ```
 
 - #### check if a bitmask has a specific permission:
 ```ts
-const canRead = permask.canRead(17);
-const canCreate = permask.canCreate(17);
-const canDelete = permask.canDelete(17);
-const canUpdate = permask.canUpdate(17);
-console.log(canRead, canCreate, canDelete, canUpdate); // true, false, false, false
+console.log(
+  permask.canRead(17),
+  permask.canCreate(17),
+  permask.canDelete(17),
+  permask.canUpdate(17)
+); // true, false, false, false
 ```
 
 - #### check if a bitmask has access to a specific group and permission:
@@ -140,16 +140,13 @@ console.log(canRead, canCreate, canDelete, canUpdate); // true, false, false, fa
 import { PermissionAccess } from "permask";
 
 // Check if bitmask has read access to LIKE group using string access
-const hasReadAccess = permask.hasAccess(53, "LIKE", "read");
-console.log(hasReadAccess); // true
+console.log(permask.hasAccess(53, "LIKE", "read")); // true
 
 // Check if bitmask has create access to LIKE group using string access
-const hasCreateAccess = permask.hasAccess(53, "LIKE", "create");
-console.log(hasCreateAccess); // false
+console.log(permask.hasAccess(53, "LIKE", "create")); // false
 
 // You can also use numeric group IDs with string access
-const hasAccessById = permask.hasAccess(53, PermissionGroup.LIKE, "update");
-console.log(hasAccessById); // true
+console.log(permask.hasAccess(53, PermissionGroup.LIKE, "update")); // true
 
 // You can use numeric access values (PermissionAccess) instead of strings
 const hasUpdateAccessNumeric = permask.hasAccess(53, PermissionGroup.LIKE, PermissionAccess.UPDATE);
@@ -158,10 +155,8 @@ console.log(hasUpdateAccessNumeric); // true
 
 - #### get group name from bitmask:
 ```ts
-const groupName = permask.getGroupName(23);
-console.log(groupName); // "LIKE"
-const groupName2 = permask.getGroupName(29);
-console.log(groupName2); // undefined
+console.log(permask.getGroupName(23)); // "LIKE"
+console.log(permask.getGroupName(29)); // undefined
 ```
 
 
@@ -173,14 +168,20 @@ You can use `permask` just with bitmask utility functions.
 
 ### Use bitmask utilities:
 
+#### `access` name vs `access` mask
+
+- **Access name**: `"read" | "create" | "update" | "delete"` (used in `createPermask().hasAccess(...)`).
+- **Access mask**: a number made from `PermissionAccess` flags (used in low-level utils), e.g. `PermissionAccess.READ | PermissionAccess.UPDATE`.
+
 **Functions:**
 - `createBitmask({ group: number, read: boolean, create: boolean, delete: boolean, update: boolean }): number` - creates a bitmask from an options.
 - `parseBitmask(bitmask: number): { group: number, read: boolean, create: boolean, delete: boolean, update: boolean }` - parses a bitmask and returns an object.
 - `getPermissionGroup(bitmask: number): number` - returns a group number from a bitmask.
-- `getPermissionAccess(bitmask: number): number` - returns an access number from a bitmask.
+- `getPermissionAccess(bitmask: number): number` - returns an access mask (4 bits) from a bitmask.
 - `hasPermissionGroup(bitmask: number, group: number): boolean` - checks if a bitmask has a specific group.
-- `hasPermissionAccess(bitmask: number, access: number): boolean` - checks if a bitmask has a specific access.
-- `hasRequiredPermission(bitmasks: number[], group: number, access: number): boolean` - checks if any bitmask in the array has the required permission for the specified group and access.
+- `hasPermissionAccess(bitmask: number, accessMask: number): boolean` - checks if a bitmask has **any** access flag from `accessMask`.
+- `hasAllPermissionAccess(bitmask: number, accessMask: number): boolean` - checks if a bitmask has **all** access flags from `accessMask`.
+- `hasRequiredPermission(bitmasks: number[], group: number, accessMask: number): boolean` - checks if any bitmask has the required group and **any** access flag from `accessMask`.
 
   useful functions:
   - `canRead(bitmask: number): boolean`
@@ -188,10 +189,14 @@ You can use `permask` just with bitmask utility functions.
   - `canDelete(bitmask: number): boolean`
   - `canUpdate(bitmask: number): boolean`
 - `setPermissionGroup(bitmask: number, group: number): number` - sets a group in a bitmask (will overwrite the previous group).
-- `setPermissionAccess(bitmask: number, access: number): number` - sets access in a bitmask (will overwrite the previous access).
-- `getPermissionBitmask(group: number, access: number): number` - creates a bitmask from a group and access.
-- `packBitbasks(bitmasks: number[], urlSafe?: boolean): string` - packs bitmasks to base64 string. (more compact than JSON.stringify)
-- `unpackBitmasks(base64: string, urlSafe?: boolean): number[]` - unpacks bitmasks from a base64 string.
+- `setPermissionAccess(bitmask: number, accessMask: number): number` - sets access mask (will overwrite the previous access).
+- `removePermissionAccess(bitmask: number, accessMask: number): number` - removes access flags from a bitmask.
+- `togglePermissionAccess(bitmask: number, accessMask: number): number` - toggles access flags in a bitmask.
+- `clearPermissionAccess(bitmask: number): number` - clears all access flags in a bitmask.
+- `getPermissionBitmask(group: number, accessMask: number): number` - creates a bitmask from a group and an access mask.
+- `packBitmasks(bitmasks: number[], urlSafe?: boolean): string` - packs bitmasks to base64 string (more compact than JSON.stringify).
+- `unpackBitmasks(packed: string, urlSafe?: boolean): number[]` - unpacks bitmasks from a packed string (throws `PermaskError` on invalid input).
+- `formatBitmask(bitmask: number, groups?: Record<string, number>): string` - formats a bitmask into a readable string for logging/debugging.
 
 **Constants:**
 - `PermissionAccess` - an enum-like object with access types.
@@ -212,8 +217,19 @@ You can use `permask` just with bitmask utility functions.
   } as const;
   ```
 
+## Integrations
 
-## [Integration with frameworks](https://github.com/dschewchenko/permask/blob/main/integrations/README.md)
+Framework integrations are published as subpath exports (ESM-only). See [src/integrations/README.md](src/integrations/README.md).
+
+- Express: `import { permaskExpress } from "permask/express";`
+- Fastify: `import { permaskFastify } from "permask/fastify";`
+- H3: `import { permaskH3 } from "permask/h3";`
+- Nitro: `import { permaskNitro } from "permask/nitro";`
+- NestJS: `import { permaskNestjs } from "permask/nestjs";`
+- Hono: `import { permaskHono } from "permask/hono";`
+- Koa: `import { permaskKoa } from "permask/koa";`
+- itty-router: `import { permaskIttyRouter } from "permask/itty-router";`
+- Elysia: `import { permaskElysia } from "permask/elysia";`
 
 ## How I'm using it?
 
@@ -236,15 +252,16 @@ If you have any questions or suggestions, feel free to open an issue or pull req
 - [x] Create a library
 - [x] Add tests
 - [x] Add documentation
-- [ ] Add easy-to-use integration with frameworks
-  - [x] Express
-  - [ ] Fastify
-  - [ ] H3
-  - [ ] Nitro
-  - [ ] NestJS
-  - [ ] Hono
-  - [ ] Koa
-  - [ ] itty-router
+- [x] Add easy-to-use integration with frameworks (subpath exports, ESM-only)
+  - [x] Express (`permask/express`) — Express middleware
+  - [x] Fastify (`permask/fastify`) — `preHandler` hook (works well with `@fastify/auth`)
+  - [x] H3 (`permask/h3`) — `requirePermask(event, ...)` + middleware
+  - [x] Nitro (`permask/nitro`) — H3-based helpers + handler wrapper
+  - [x] NestJS (`permask/nestjs`) — Decorator + Guard
+  - [x] Hono (`permask/hono`) — middleware (context-based)
+  - [x] Koa (`permask/koa`) — async middleware (typically via `ctx.state`)
+  - [x] itty-router (`permask/itty-router`) — handler / `before` middleware returning `Response`
+  - [x] Elysia (`permask/elysia`) — `beforeHandle` helper (usable inside `guard`)
 
 
 ## License

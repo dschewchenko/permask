@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  canCreate,
   canDelete,
   canRead,
   canUpdate,
-  canCreate,
   createBitmask,
   getPermissionAccess,
   getPermissionBitmask,
@@ -34,17 +34,21 @@ const bitmaskWithUpdate = 0b10000 | 0b0101; // 21 = POST (1) << 4 | READ+UPDATE 
 describe("Permission Bitmask Utilities", () => {
   describe("createBitmask", () => {
     it("should create correct bitmask", () => {
-      expect(createBitmask({ group: TestPermissionGroup.USER, read: false, create: false, delete: false, update: false })).toBe(
-        bitmask0
-      );
-      expect(createBitmask({ group: TestPermissionGroup.POST, read: true, create: true, delete: true, update: true })).toBe(bitmask1);
-      expect(createBitmask({ group: TestPermissionGroup.COMMENT, read: true, create: false, delete: false, update: false })).toBe(
-        bitmask2
-      );
-      expect(createBitmask({ group: TestPermissionGroup.LIKE, read: true, create: true, delete: true, update: true })).toBe(bitmask3);
-      expect(createBitmask({ group: TestPermissionGroup.POST, read: true, create: false, delete: false, update: true })).toBe(
-        bitmaskWithUpdate
-      );
+      expect(
+        createBitmask({ group: TestPermissionGroup.USER, read: false, create: false, delete: false, update: false })
+      ).toBe(bitmask0);
+      expect(
+        createBitmask({ group: TestPermissionGroup.POST, read: true, create: true, delete: true, update: true })
+      ).toBe(bitmask1);
+      expect(
+        createBitmask({ group: TestPermissionGroup.COMMENT, read: true, create: false, delete: false, update: false })
+      ).toBe(bitmask2);
+      expect(
+        createBitmask({ group: TestPermissionGroup.LIKE, read: true, create: true, delete: true, update: true })
+      ).toBe(bitmask3);
+      expect(
+        createBitmask({ group: TestPermissionGroup.POST, read: true, create: false, delete: false, update: true })
+      ).toBe(bitmaskWithUpdate);
     });
   });
 
@@ -141,9 +145,9 @@ describe("Permission Bitmask Utilities", () => {
     });
 
     it("should verify create access", () => {
-    expect(canCreate(bitmask1)).toBe(true);
-    expect(canCreate(bitmask2)).toBe(false);
-    expect(canCreate(bitmaskWithUpdate)).toBe(false);
+      expect(canCreate(bitmask1)).toBe(true);
+      expect(canCreate(bitmask2)).toBe(false);
+      expect(canCreate(bitmaskWithUpdate)).toBe(false);
     });
 
     it("should verify delete access", () => {

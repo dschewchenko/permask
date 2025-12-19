@@ -1,11 +1,10 @@
-export const base64ToUrlSafe = (base64: string) => base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-
-export const urlSafeToBase64 = (base64: string) => base64.replace(/-/g, "+").replace(/_/g, "/");
+import { PermaskError } from "../errors";
+import { base64ToUrlSafe, decodeBase64, encodeBase64, urlSafeToBase64 } from "./base64";
 
 type BitDepth = 8 | 16 | 32;
 
 const prefixMap: Record<BitDepth, string> = { 8: "A", 16: "B", 32: "C" };
-const reversePrefixMap: Record<string, BitDepth> = { "A": 8, "B": 16, "C": 32 };
+const reversePrefixMap: Record<string, BitDepth> = { A: 8, B: 16, C: 32 };
 
 /**
  * Convert bitmasks to base64
@@ -25,25 +24,40 @@ const reversePrefixMap: Record<string, BitDepth> = { "A": 8, "B": 16, "C": 32 };
 export function packBitmasks(bitmasks: number[], urlSafe = false): string {
   if (!bitmasks?.length) return "";
 
-  const max = Math.max(...bitmasks);
-  const depth: BitDepth = max < 256 ? 8 : max < 65536 ? 16 : 32;
-  const bytesPerElement = depth >> 3;
-  const buffer = new ArrayBuffer(bitmasks.length * bytesPerElement);
-  const TypedArray = depth === 8 ? Uint8Array : depth === 16 ? Uint16Array : Uint32Array;
-  const view = new TypedArray(buffer).fill(0);
+  try {
+    const max = bitmasks.reduce((currentMax, bitmask) => Math.max(currentMax, bitmask >>> 0), 0);
+    const depth: BitDepth = max < 0x100 ? 8 : max < 0x10000 ? 16 : 32;
+    const bytesPerElement = depth >> 3;
+    const bytes = new Uint8Array(bitmasks.length * bytesPerElement);
 
-  for (let i = 0; i < bitmasks.length; i++) {
-    view[i] = bitmasks[i];
+    for (let i = 0; i < bitmasks.length; i++) {
+      const value = bitmasks[i] >>> 0;
+      const offset = i * bytesPerElement;
+
+      if (depth === 8) {
+        bytes[offset] = value & 0xff;
+        continue;
+      }
+
+      if (depth === 16) {
+        bytes[offset] = value & 0xff;
+        bytes[offset + 1] = (value >>> 8) & 0xff;
+        continue;
+      }
+
+      bytes[offset] = value & 0xff;
+      bytes[offset + 1] = (value >>> 8) & 0xff;
+      bytes[offset + 2] = (value >>> 16) & 0xff;
+      bytes[offset + 3] = (value >>> 24) & 0xff;
+    }
+
+    const base64 = prefixMap[depth] + encodeBase64(bytes);
+    return urlSafe ? base64ToUrlSafe(base64) : base64;
+  } catch (cause) {
+    throw cause instanceof PermaskError
+      ? cause
+      : new PermaskError("BASE64_UNAVAILABLE", "Failed to pack bitmasks.", { cause });
   }
-
-  const uint8View = new Uint8Array(buffer);
-  let binaryString = "";
-  for (let i = 0; i < uint8View.length; i++) {
-    binaryString += String.fromCharCode(uint8View[i]);
-  }
-
-  const base64 = prefixMap[depth] + btoa(binaryString);
-  return urlSafe ? base64ToUrlSafe(base64) : base64;
 }
 
 /**
@@ -65,25 +79,44 @@ export function unpackBitmasks(packed: string, urlSafe = false): number[] {
 
   try {
     const prefix = packed[0];
-    const base64String = urlSafe ? urlSafeToBase64(packed.substring(1)) : packed.substring(1);
     const depth = reversePrefixMap[prefix];
 
-    if (!depth) throw new Error("Invalid packed string: unknown prefix.");
-
-    const binaryString = atob(base64String);
-    const buffer = new ArrayBuffer(binaryString.length);
-    const uint8View = new Uint8Array(buffer).fill(0);
-
-    for (let i = 0; i < binaryString.length; i++) {
-      uint8View[i] = binaryString.charCodeAt(i);
+    if (!depth) {
+      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: unknown prefix.");
     }
 
-    const TypedArray = depth === 8 ? Uint8Array : depth === 16 ? Uint16Array : Uint32Array;
-    const finalView = new TypedArray(buffer);
+    const base64String = urlSafe ? urlSafeToBase64(packed.substring(1)) : packed.substring(1);
+    const bytes = decodeBase64(base64String);
+    const bytesPerElement = depth >> 3;
 
-    return Array.from(finalView);
-  } catch (e) {
-    console.error("Failed to unpack string:", e);
-    return [];
+    if (bytes.length % bytesPerElement !== 0) {
+      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: invalid byte length.");
+    }
+
+    const resultLength = bytes.length / bytesPerElement;
+    const result = new Array<number>(resultLength);
+
+    for (let i = 0; i < resultLength; i++) {
+      const offset = i * bytesPerElement;
+
+      if (depth === 8) {
+        result[i] = bytes[offset];
+        continue;
+      }
+
+      if (depth === 16) {
+        result[i] = bytes[offset] | (bytes[offset + 1] << 8);
+        continue;
+      }
+
+      result[i] =
+        (bytes[offset] | (bytes[offset + 1] << 8) | (bytes[offset + 2] << 16) | (bytes[offset + 3] << 24)) >>> 0;
+    }
+
+    return result;
+  } catch (cause) {
+    throw cause instanceof PermaskError
+      ? cause
+      : new PermaskError("INVALID_PACKED_STRING", "Failed to unpack bitmasks.", { cause });
   }
 }
