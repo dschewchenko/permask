@@ -1,3 +1,15 @@
+# [3.0.0](https://github.com/dschewchenko/permask/compare/v2.1.1...v3.0.0) (2025-12-19)
+
+
+* feat!: migrate to Bun, publish ESM-only exports, add framework integrations ([#30](https://github.com/dschewchenko/permask/issues/30)) ([#32](https://github.com/dschewchenko/permask/issues/32)) ([31df744](https://github.com/dschewchenko/permask/commit/31df744123bee980a53a7092d1ca67c5aaa24cf5))
+
+
+### BREAKING CHANGES
+
+* package is ESM-only (CJS/UMD entry points removed)
+* unpackBitmasks now throws PermaskError on invalid input
+* createPermask().create now throws PermaskError for unknown groups
+
 ## [2.1.1](https://github.com/dschewchenko/permask/compare/v2.1.0...v2.1.1) (2025-07-06)
 
 
