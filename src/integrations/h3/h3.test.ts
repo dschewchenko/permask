@@ -1,3 +1,4 @@
+import type { H3Event } from "h3";
 import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
@@ -13,7 +14,7 @@ describe("permask H3 integration", () => {
 
     const event = {
       context: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } }
-    } as any;
+    } as unknown as H3Event;
 
     await expect(requirePermask(event, groups.POST, PermissionAccess.READ)).resolves.toBe(true);
   });
@@ -21,7 +22,7 @@ describe("permask H3 integration", () => {
   it("requirePermask throws forbidden error when permission is missing", async () => {
     const { requirePermask } = permaskH3(groups);
 
-    const event = { context: { user: { permissions: [] } } } as any;
+    const event = { context: { user: { permissions: [] } } } as unknown as H3Event;
 
     await expect(requirePermask(event, groups.POST, PermissionAccess.READ)).rejects.toMatchObject({ status: 403 });
   });
@@ -31,7 +32,7 @@ describe("permask H3 integration", () => {
 
     const event = {
       context: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } }
-    } as any;
+    } as unknown as H3Event;
 
     const next = vi.fn().mockResolvedValue("ok");
     const middleware = permaskMiddleware(groups.POST, PermissionAccess.READ);
@@ -43,7 +44,7 @@ describe("permask H3 integration", () => {
   it("permaskMiddleware throws when forbidden", async () => {
     const { permaskMiddleware } = permaskH3(groups);
 
-    const event = { context: { user: { permissions: [] } } } as any;
+    const event = { context: { user: { permissions: [] } } } as unknown as H3Event;
     const next = vi.fn();
     const middleware = permaskMiddleware(groups.POST, PermissionAccess.READ);
 
@@ -51,4 +52,3 @@ describe("permask H3 integration", () => {
     expect(next).not.toHaveBeenCalled();
   });
 });
-

@@ -112,8 +112,7 @@ describe("Permask", () => {
     it("should handle non-existent group when creating bitmask", () => {
       expect(() =>
         permask.create({
-          // biome-ignore lint/suspicious/noExplicitAny: intentional invalid group for test case
-          group: "NON_EXISTENT_GROUP" as any,
+          group: "NON_EXISTENT_GROUP" as never,
           read: true,
           create: true,
           delete: false,
@@ -132,8 +131,7 @@ describe("Permask", () => {
       });
 
       // Test with non-existent string group name
-      // biome-ignore lint/suspicious/noExplicitAny: intentional invalid group for test case
-      expect(permask.hasGroup(bitmask, "NON_EXISTENT_GROUP" as any)).toBe(false);
+      expect(permask.hasGroup(bitmask, "NON_EXISTENT_GROUP" as never)).toBe(false);
 
       // Test with non-existent numeric group ID
       expect(permask.hasGroup(bitmask, 999)).toBe(false);

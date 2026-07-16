@@ -69,12 +69,8 @@ export function permaskFastify<Groups extends Record<string, number | string>>(
         }
 
         await options.forbiddenResponse(reply);
-      } catch (error) {
-        return reply.code(500).send({
-          error: "Internal server error",
-          // @ts-expect-error
-          details: error?.message
-        });
+      } catch {
+        return reply.code(500).send({ error: "Internal server error" });
       }
     };
   };

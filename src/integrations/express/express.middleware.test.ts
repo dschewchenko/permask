@@ -84,10 +84,7 @@ describe("permask Express Middleware", () => {
     checkPermission(groups.POSTS, PermissionAccess.READ)(req, res, mockNext);
     expect(mockNext).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: "Internal server error",
-      details: "Test error"
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 
   it("should support async getPermissions (allow)", async () => {
@@ -127,10 +124,7 @@ describe("permask Express Middleware", () => {
 
     expect(mockNext).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: "Internal server error",
-      details: "Async error"
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 
   it("should return 500 when forbiddenResponse throws", () => {
@@ -148,10 +142,7 @@ describe("permask Express Middleware", () => {
 
     expect(mockNext).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: "Internal server error",
-      details: "Forbidden error"
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 
   it("should return 500 when forbiddenResponse promise rejects", async () => {
@@ -172,9 +163,6 @@ describe("permask Express Middleware", () => {
 
     expect(mockNext).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      error: "Internal server error",
-      details: "Forbidden async error"
-    });
+    expect(res.json).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 });

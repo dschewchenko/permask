@@ -1,18 +1,18 @@
+import type { ExecutionContext } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
-import {
-  PERMASK_NESTJS_METADATA_KEY,
-  Permask,
-  PermaskGuard,
-  createPermaskNestjsGuard,
-  permaskNestjs
-} from "./";
+import { createPermaskNestjsGuard, PERMASK_NESTJS_METADATA_KEY, Permask, PermaskGuard, permaskNestjs } from "./";
 
 const groups = {
   POST: 1,
   COMMENT: 2
 } as const;
+
+type ReflectMetadata = typeof Reflect & {
+  defineMetadata?: (metadataKey: unknown, metadataValue: unknown, target: object) => void;
+  getMetadata?: (metadataKey: unknown, target: object) => unknown;
+};
 
 function createExecutionContext(params: { handler?: unknown; klass?: unknown; request?: unknown }) {
   return {
@@ -21,12 +21,12 @@ function createExecutionContext(params: { handler?: unknown; klass?: unknown; re
     switchToHttp: () => ({
       getRequest: () => params.request
     })
-  } as any;
+  } as unknown as ExecutionContext;
 }
 
 describe("permask NestJS integration", () => {
   it("throws a helpful error when reflect-metadata is not loaded", () => {
-    const reflect = Reflect as any;
+    const reflect = Reflect as ReflectMetadata;
     const originalDefineMetadata = reflect.defineMetadata;
     const originalGetMetadata = reflect.getMetadata;
 
@@ -97,7 +97,7 @@ describe("permask NestJS integration", () => {
     const context = createExecutionContext({ klass: PostsController, request });
 
     const Guard = createPermaskNestjsGuard({
-      getPermissions: (_opts, req) => (req as any).auth?.perms ?? []
+      getPermissions: (_opts, req) => (req.auth as { perms?: number[] } | undefined)?.perms ?? []
     });
 
     const guard = new Guard();

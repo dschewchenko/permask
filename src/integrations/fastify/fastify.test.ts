@@ -1,3 +1,4 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
 import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
@@ -14,12 +15,12 @@ describe("permask Fastify integration", () => {
 
     const request = {
       user: { permissions: [createBitmask({ group: groups.POST, read: true })] }
-    } as any;
+    } as unknown as FastifyRequest;
 
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as any;
+    } as unknown as FastifyReply;
 
     await hook(request, reply);
 
@@ -31,11 +32,11 @@ describe("permask Fastify integration", () => {
     const check = permaskFastify(groups);
     const hook = check(groups.POST, PermissionAccess.READ);
 
-    const request = { user: { permissions: [] } } as any;
+    const request = { user: { permissions: [] } } as unknown as FastifyRequest;
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as any;
+    } as unknown as FastifyReply;
 
     await hook(request, reply);
 
@@ -51,16 +52,15 @@ describe("permask Fastify integration", () => {
     });
     const hook = check(groups.POST, PermissionAccess.READ);
 
-    const request = {} as any;
+    const request = {} as FastifyRequest;
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as any;
+    } as unknown as FastifyReply;
 
     await hook(request, reply);
 
     expect(reply.code).toHaveBeenCalledWith(500);
-    expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error", details: "boom" });
+    expect(reply.send).toHaveBeenCalledWith({ error: "Internal server error" });
   });
 });
-

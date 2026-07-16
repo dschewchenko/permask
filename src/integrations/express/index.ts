@@ -25,9 +25,8 @@ function isThenable<T>(value: unknown): value is PromiseLike<T> {
   return typeof (value as { then?: unknown } | null | undefined)?.then === "function";
 }
 
-function sendInternalError(res: Response, error: unknown) {
-  const details = error instanceof Error ? error.message : String(error);
-  return res.status(500).json({ error: "Internal server error", details });
+function sendInternalError(res: Response) {
+  return res.status(500).json({ error: "Internal server error" });
 }
 
 /**
@@ -80,10 +79,10 @@ export function permaskExpress<Groups extends Record<string, number | string>>(
           try {
             const maybePromise = options.forbiddenResponse(res);
             if (isThenable(maybePromise)) {
-              Promise.resolve(maybePromise).catch((error: unknown) => sendInternalError(res, error));
+              Promise.resolve(maybePromise).catch(() => sendInternalError(res));
             }
-          } catch (error) {
-            sendInternalError(res, error);
+          } catch {
+            sendInternalError(res);
           }
         };
 
@@ -97,13 +96,13 @@ export function permaskExpress<Groups extends Record<string, number | string>>(
         if (isThenable<number[]>(bitmasksOrPromise)) {
           Promise.resolve(bitmasksOrPromise)
             .then(handleBitmasks)
-            .catch((error: unknown) => sendInternalError(res, error));
+            .catch(() => sendInternalError(res));
           return;
         }
 
         return handleBitmasks(bitmasksOrPromise);
-      } catch (error) {
-        return sendInternalError(res, error);
+      } catch {
+        return sendInternalError(res);
       }
     };
   };

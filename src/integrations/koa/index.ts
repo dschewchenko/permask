@@ -71,13 +71,9 @@ export function permaskKoa<Groups extends Record<string, number | string>>(
         }
 
         return options.forbiddenResponse(ctx);
-      } catch (error) {
+      } catch {
         ctx.status = 500;
-        ctx.body = {
-          error: "Internal server error",
-          // @ts-expect-error
-          details: error?.message
-        };
+        ctx.body = { error: "Internal server error" };
       }
     };
   };

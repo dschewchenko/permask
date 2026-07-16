@@ -62,15 +62,8 @@ export function permaskHono<
         }
 
         return options.forbiddenResponse(c);
-      } catch (error) {
-        return c.json(
-          {
-            error: "Internal server error",
-            // @ts-expect-error
-            details: error?.message
-          },
-          500
-        );
+      } catch {
+        return c.json({ error: "Internal server error" }, 500);
       }
     };
   };

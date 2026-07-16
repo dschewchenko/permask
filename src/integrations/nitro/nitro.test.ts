@@ -1,3 +1,4 @@
+import type { H3Event } from "h3";
 import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
@@ -16,7 +17,7 @@ describe("permask Nitro integration", () => {
 
     const event = {
       context: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } }
-    } as any;
+    } as unknown as H3Event;
 
     await expect(protectedHandler(event)).resolves.toBe("ok");
     expect(handler).toHaveBeenCalledWith(event);
@@ -30,10 +31,9 @@ describe("permask Nitro integration", () => {
 
     const event = {
       context: { user: { permissions: [] } }
-    } as any;
+    } as unknown as H3Event;
 
     await expect(protectedHandler(event)).rejects.toMatchObject({ status: 403 });
     expect(handler).not.toHaveBeenCalled();
   });
 });
-

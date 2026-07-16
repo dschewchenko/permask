@@ -1,3 +1,4 @@
+import type { PreContext } from "elysia";
 import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
@@ -15,7 +16,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } },
       status: vi.fn()
-    } as any;
+    } as unknown as PreContext;
 
     await beforeHandle(ctx);
 
@@ -29,7 +30,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: { user: { permissions: [] } },
       status: vi.fn().mockReturnValue("forbidden")
-    } as any;
+    } as unknown as PreContext;
 
     const result = await beforeHandle(ctx);
 
@@ -48,7 +49,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: {},
       status: vi.fn().mockReturnValue("internal")
-    } as any;
+    } as unknown as PreContext;
 
     const result = await beforeHandle(ctx);
 
@@ -56,4 +57,3 @@ describe("permask Elysia integration", () => {
     expect(result).toBe("internal");
   });
 });
-

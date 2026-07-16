@@ -1,3 +1,4 @@
+import type { IRequest } from "itty-router";
 import { describe, expect, it } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
@@ -14,7 +15,7 @@ describe("permask itty-router integration", () => {
 
     const req = {
       user: { permissions: [createBitmask({ group: groups.POST, read: true })] }
-    } as any;
+    } as unknown as IRequest;
 
     await expect(handler(req)).resolves.toBeUndefined();
   });
@@ -23,7 +24,7 @@ describe("permask itty-router integration", () => {
     const check = permaskIttyRouter(groups);
     const handler = check(groups.POST, PermissionAccess.READ);
 
-    const req = { user: { permissions: [] } } as any;
+    const req = { user: { permissions: [] } } as unknown as IRequest;
     const res = (await handler(req)) as Response;
 
     expect(res.status).toBe(403);
@@ -38,11 +39,10 @@ describe("permask itty-router integration", () => {
     });
     const handler = check(groups.POST, PermissionAccess.READ);
 
-    const req = {} as any;
+    const req = {} as IRequest;
     const res = (await handler(req)) as Response;
 
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
   });
 });
-
