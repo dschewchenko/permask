@@ -1,6 +1,6 @@
 {
   "name": "permask",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "type": "module",
   "description": "A lightweight utility library for managing permission bitmasks with groups and access levels",
   "workspaces": [

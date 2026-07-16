@@ -1,3 +1,10 @@
+## [3.0.1](https://github.com/dschewchenko/permask/compare/v3.0.0...v3.0.1) (2026-07-16)
+
+
+### Bug Fixes
+
+* complete 3.0 release hardening ([0c86f9b](https://github.com/dschewchenko/permask/commit/0c86f9bce049dffd291f10eebf3ae8dc1d344bad))
+
 # [3.0.0](https://github.com/dschewchenko/permask/compare/v2.1.1...v3.0.0) (2026-07-16)
 
 
