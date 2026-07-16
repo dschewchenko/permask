@@ -3,6 +3,13 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      publish_only:
+        description: "Publish/tag without running prepare plugins (no CHANGELOG/package.json updates)"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -31,7 +38,7 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Use cache
         uses: actions/cache@v4
@@ -52,7 +59,12 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npx semantic-release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.publish_only }}" = "true" ]; then
+            npx semantic-release --prepare false
+          else
+            npx semantic-release
+          fi
 
   playground:
     name: Playground

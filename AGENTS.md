@@ -52,3 +52,7 @@ bun --cwd=playground/vue run build
 - Breaking changes: use `feat!:` / `fix!:` or add a `BREAKING CHANGE:` footer.
 - PRs should include: a short description, rationale, and any relevant usage notes.
 - Requirements: `bun run lint`, `bun run test:coverage`, and `bun run build` must pass; avoid committing generated `dist/` output.
+
+## Writing & Response Style
+
+- Ukrainian UI, site, blog, update and digest copy must sound like living Ukrainian, not Russian-influenced bureaucratic text or literal English translation. Prefer "обліковий запис", "розгортання", "випуск", "адаптація користувачів", "знімок сторінки", "зміна", "сценарій", "сторінка з вмістом" and "посібник" when they fit. Avoid public-copy words like "акаунт", "деплой", "реліз", "онбординг", "білінг", "скріншот", "контентний", "по селектору", "коректний" and similar calques unless a technical context clearly needs them.
