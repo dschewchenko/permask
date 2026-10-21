@@ -21,14 +21,14 @@
   },
   "sideEffects": false,
   "scripts": {
-    "build": "bunx vite build",
+    "build": "bunx --bun vite build",
     "check": "bun run lint && bun run typecheck && bun run test -- --run && bun run build",
-    "test": "bunx vitest",
-    "test:coverage": "bunx vitest run --coverage",
-    "typecheck": "bunx tsc -p tsconfig.json --noEmit",
-    "lint": "bunx biome check .",
+    "test": "bunx --bun vitest",
+    "test:coverage": "bunx --bun vitest run --coverage",
+    "typecheck": "bun --bun tsrs --checkers 2 -p tsconfig.json --noEmit",
+    "lint": "bunx --bun biome check .",
     "lint:fix": "bun run lint -- --write",
-    "prepare": "bunx is-ci || bunx husky",
+    "prepare": "bunx --bun is-ci || bunx --bun husky",
     "husky:pre-commit": "bun run lint",
     "prepublishOnly": "bun run build"
   },
@@ -45,7 +45,7 @@
     "@types/express": "^5.0.6",
     "@types/koa": "^3.0.3",
     "@types/node": "^26.1.1",
-    "@typescript/typescript6": "^6.0.2",
+    "@typescript/typescript6": "6.0.2",
     "@vitest/coverage-v8": "^4.1.10",
     "elysia": "^1.4.29",
     "fastify": "^5.10.0",
@@ -56,8 +56,9 @@
     "itty-router": "^5.0.24",
     "reflect-metadata": "^0.2.2",
     "semantic-release": "^25.0.7",
-    "typescript": "^7.0.2",
-    "vite": "^8.1.4",
+    "tsrs": "0.18.0-ts7.1.0-dev.20260929",
+    "typescript": "7.0.2",
+    "vite": "8.3.5",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.10"
   },
@@ -180,7 +181,7 @@
     "tar": "7.5.20",
     "undici": "7.28.0"
   },
-  "packageManager": "bun@1.4.0",
+  "packageManager": "bun@1.4.2",
   "engines": {
     "node": ">=20.9.0",
     "bun": ">=1.0.0"
