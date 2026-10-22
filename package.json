@@ -181,7 +181,7 @@
     "tar": "7.5.20",
     "undici": "7.28.0"
   },
-  "packageManager": "bun@1.4.2",
+  "packageManager": "bun@1.4.4",
   "engines": {
     "node": ">=20.9.0",
     "bun": ">=1.0.0"
