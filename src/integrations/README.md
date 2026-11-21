@@ -62,7 +62,11 @@ import { defineEventHandler } from "h3";
 import { permaskNitro } from "permask/nitro";
 
 const { protect } = permaskNitro(groups);
-export default protect(groups.POST, PermissionAccess.READ, defineEventHandler(() => "ok"));
+export default protect(
+  groups.POST,
+  PermissionAccess.READ,
+  defineEventHandler(() => "ok")
+);
 ```
 
 ## NestJS
