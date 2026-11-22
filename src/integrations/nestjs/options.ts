@@ -1,6 +1,8 @@
-import { get } from "../../utils/object";
+import { type PathPropertyValue, readPermissionBitmasks } from "../../utils/object";
 
-export type NestRequestLike = Record<string, unknown>;
+export type PermaskMetadataTarget = object;
+
+export type NestRequestLike = Record<string, PathPropertyValue>;
 
 /**
  * Options for `permaskNestjs(...)`.
@@ -16,9 +18,12 @@ export type PermaskNestjsOptions = {
   /**
    * Callback to get permissions from request.
    *
-   * @default ({ permissionsKey }, req) => get(req, permissionsKey, [])
+   * @default ({ permissionsKey }, req) => readPermissionBitmasks(req, permissionsKey)
    */
-  getPermissions?: (opts: Required<PermaskNestjsOptions>, req: NestRequestLike) => number[] | Promise<number[]>;
+  getPermissions?: (
+    opts: Required<PermaskNestjsOptions>,
+    req: NestRequestLike
+  ) => Array<number> | Promise<Array<number>>;
 };
 
 /**
@@ -27,7 +32,7 @@ export type PermaskNestjsOptions = {
 export const defaultPermaskNestjsOptions: Required<PermaskNestjsOptions> = {
   permissionsKey: "user.permissions",
   getPermissions: ({ permissionsKey }: Required<PermaskNestjsOptions>, req: NestRequestLike) =>
-    get(req, permissionsKey, []) as number[]
+    readPermissionBitmasks(req, permissionsKey)
 };
 
 export type PermaskRequirement = {

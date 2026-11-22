@@ -1,5 +1,5 @@
 import type { FastifyReply, FastifyRequest } from "fastify";
-import { get } from "../../utils/object";
+import { readPermissionBitmasks } from "../../utils/object";
 
 /**
  * Options for `permaskFastify(...)`.
@@ -15,24 +15,27 @@ export type PermaskFastifyOptions = {
   /**
    * Callback to get permissions from request.
    *
-   * @default ({ permissionsKey }, req) => get(req, permissionsKey, [])
+   * @default ({ permissionsKey }, req) => readPermissionBitmasks(req, permissionsKey)
    */
-  getPermissions?: (opts: Required<PermaskFastifyOptions>, req: FastifyRequest) => number[] | Promise<number[]>;
+  getPermissions?: (
+    opts: Required<PermaskFastifyOptions>,
+    req: FastifyRequest
+  ) => Array<number> | Promise<Array<number>>;
 
   /**
    * Callback to send a forbidden response.
    *
    * @default (reply) => reply.code(403).send({ error: "Access denied" })
    */
-  forbiddenResponse?: (reply: FastifyReply) => unknown | Promise<unknown>;
+  forbiddenResponse?: (reply: FastifyReply) => FastifyReply | void | Promise<FastifyReply | void>;
 };
 
 /**
  * Default options for `permaskFastify(...)`.
  */
-export const defaultPermaskFastifyOptions: Required<PermaskFastifyOptions> = {
+export const defaultPermaskFastifyOptions = {
   permissionsKey: "user.permissions",
   getPermissions: ({ permissionsKey }: Required<PermaskFastifyOptions>, req: FastifyRequest) =>
-    get(req as unknown as Record<string, unknown>, permissionsKey, []) as number[],
+    readPermissionBitmasks(req, permissionsKey),
   forbiddenResponse: (reply: FastifyReply) => reply.code(403).send({ error: "Access denied" })
-};
+} satisfies Required<PermaskFastifyOptions>;

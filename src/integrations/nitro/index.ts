@@ -1,4 +1,4 @@
-import type { H3Event } from "h3";
+import type { EventHandlerResponse, H3Event } from "h3";
 import { type PermaskH3Integration, type PermaskH3Options, permaskH3 } from "../h3";
 
 export type { H3Event } from "h3";
@@ -8,7 +8,7 @@ export { defaultPermaskH3Options } from "../h3";
 /**
  * Minimal Nitro/H3 handler signature (enough for wrapper helpers).
  */
-export type NitroEventHandlerLike = (event: H3Event) => unknown | Promise<unknown>;
+export type NitroEventHandlerLike<Result = EventHandlerResponse> = (event: H3Event) => Result | Promise<Result>;
 
 /**
  * Nitro helpers returned by {@link permaskNitro}.
@@ -33,7 +33,11 @@ export type PermaskNitroIntegration<Groups extends Record<string, number | strin
    * export default protect(groups.admin, PermissionAccess.READ, defineEventHandler(() => "ok"));
    * ```
    */
-  protect: (group: Groups[keyof Groups], accessMask: number, handler: NitroEventHandlerLike) => NitroEventHandlerLike;
+  protect: <Result>(
+    group: Groups[keyof Groups],
+    accessMask: number,
+    handler: NitroEventHandlerLike<Result>
+  ) => (event: H3Event) => Promise<Result>;
 };
 
 /**
@@ -66,11 +70,11 @@ export function permaskNitro<Groups extends Record<string, number | string>>(
 ): PermaskNitroIntegration<Groups> {
   const h3 = permaskH3(groups, opts);
 
-  function protect(
+  function protect<Result>(
     group: Groups[keyof Groups],
     accessMask: number,
-    handler: NitroEventHandlerLike
-  ): NitroEventHandlerLike {
+    handler: NitroEventHandlerLike<Result>
+  ): (event: H3Event) => Promise<Result> {
     return async (event) => {
       await h3.requirePermask(event, group, accessMask);
       return handler(event);

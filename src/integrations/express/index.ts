@@ -86,14 +86,14 @@ export function permaskExpress<Groups extends Record<string, number | string>>(
           }
         };
 
-        const handleBitmasks = (bitmasks: number[]) => {
+        const handleBitmasks = (bitmasks: Array<number>) => {
           if (hasRequiredPermission(bitmasks, group as number, accessMask)) {
             return next();
           }
           return handleForbidden();
         };
 
-        if (isThenable<number[]>(bitmasksOrPromise)) {
+        if (isThenable<Array<number>>(bitmasksOrPromise)) {
           Promise.resolve(bitmasksOrPromise)
             .then(handleBitmasks)
             .catch(() => sendInternalError(res));

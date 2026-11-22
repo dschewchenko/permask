@@ -1,9 +1,31 @@
-export const get = (obj: Record<string, unknown> | null, path: string, defaultValue?: unknown): unknown => {
-  if (!path) return obj;
-  if (!obj) return defaultValue;
+export type PathPropertyValue = object | string | number | boolean | bigint | symbol | null | undefined;
+
+type PathLookup = { found: true; value: unknown } | { found: false };
+
+interface PermissionPathNode {
+  readonly [segment: string]: PermissionPathNode | Array<number> | null | undefined;
+}
+
+export function findPathValue(value: unknown, path: string): PathLookup {
+  if (!path) {
+    return { found: true, value };
+  }
+  if (!value) {
+    return { found: false };
+  }
+
   const [head, ...tail] = path.split(".");
+  const target = value as PermissionPathNode;
+  // Preserve property access on inherited getters and boxed primitives.
+  if (target[head] === undefined) {
+    return { found: false };
+  }
 
-  if (obj[head] === undefined) return defaultValue;
+  return findPathValue(target[head], tail.join("."));
+}
 
-  return get(obj[head] as Record<string, unknown>, tail.join("."), defaultValue) as (typeof obj)[typeof head];
-};
+export function readPermissionBitmasks(source: unknown, path: string): Array<number> {
+  const property = findPathValue(source, path);
+  // The authentication middleware supplies number[] at the configured path.
+  return property.found ? (property.value as Array<number>) : [];
+}

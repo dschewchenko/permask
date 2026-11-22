@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import {computed, ref} from "vue";
-import {createPermask} from "../../../src";
+import { computed, ref } from "vue";
+import { createPermask } from "../../../src";
 import "highlight.js/styles/github.css";
 import PermissionTable from "./components/PermissionTable.vue";
 import CodePreview from "./components/CodePreview.vue";
@@ -21,7 +21,7 @@ const groups = ref({
 type Groups = typeof groups.value;
 
 // Track permissions as an array of bitmasks
-const permissions = ref<number[]>([]);
+const permissions = ref<Array<number>>([]);
 
 // Create a permask instance with our groups
 const permask = computed(() => createPermask(groups.value));
@@ -30,10 +30,12 @@ const permask = computed(() => createPermask(groups.value));
 const addPermission = (groupKey: string, read: boolean, create: boolean, update: boolean, del: boolean) => {
   const group = groups.value[groupKey as keyof typeof groups.value];
 
-  if (group === undefined) return;
+  if (group === undefined) {
+    return;
+  }
 
   const bitmask = permask.value.create({
-    group: group,
+    group,
     read,
     create,
     update,
@@ -41,9 +43,7 @@ const addPermission = (groupKey: string, read: boolean, create: boolean, update:
   });
 
   // Replace existing permission for this group or add new one
-  const existingIndex = permissions.value.findIndex(p =>
-    permask.value.hasGroup(p, group)
-  );
+  const existingIndex = permissions.value.findIndex((p) => permask.value.hasGroup(p, group));
 
   if (existingIndex >= 0) {
     permissions.value[existingIndex] = bitmask;
@@ -53,7 +53,7 @@ const addPermission = (groupKey: string, read: boolean, create: boolean, update:
 };
 
 // Handle updates from the permission table
-const updatePermissions = (updatedPermissions: number[]) => {
+const updatePermissions = (updatedPermissions: Array<number>) => {
   permissions.value = updatedPermissions;
 };
 
@@ -62,7 +62,7 @@ const updateGroups = (updatedGroups: Groups | Record<string, number>) => {
   groups.value = updatedGroups as Groups;
 
   // Filter out permissions for groups that no longer exist
-  permissions.value = permissions.value.filter(p => {
+  permissions.value = permissions.value.filter((p) => {
     const group = permask.value.getGroupName(p);
     return group !== undefined;
   });
@@ -72,7 +72,7 @@ const updateGroups = (updatedGroups: Groups | Record<string, number>) => {
 const exportConfig = () => {
   const config = {
     groups: groups.value,
-    permissions: permissions.value.map(p => {
+    permissions: permissions.value.map((p) => {
       const parsedBitmask = permask.value.parse(p);
       const groupName = permask.value.getGroupName(p);
       return {
@@ -86,12 +86,12 @@ const exportConfig = () => {
     })
   };
 
-  const blob = new Blob([JSON.stringify(config, null, 2)], {type: "application/json"});
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = "permask-config.json";
-  document.body.appendChild(a);
+  document.body.append(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
@@ -105,14 +105,16 @@ const importConfig = () => {
 
   input.onchange = (e) => {
     const file = (e.target as HTMLInputElement).files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
         const config = JSON.parse(e.target?.result as string);
 
-        if (config.groups && typeof config.groups === 'object') {
+        if (config.groups && typeof config.groups === "object") {
           groups.value = config.groups;
         }
 
@@ -120,13 +122,10 @@ const importConfig = () => {
           // Handle two possible formats:
           // 1. Array of numbers (just bitmasks)
           // 2. Array of objects with bitmask property
-          permissions.value = config.permissions.map(p =>
-            typeof p === 'number' ? p : (p.bitmask || 0)
-          );
+          permissions.value = config.permissions.map((p) => (typeof p === "number" ? p : p.bitmask || 0));
         }
-      } catch (err) {
+      } catch {
         alert("Failed to import configuration: Invalid JSON format");
-        console.error(err);
       }
     };
 
@@ -160,10 +159,7 @@ const importConfig = () => {
     <main class="grid grid-cols-1 gap-8 lg:grid-cols-2">
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Group Configuration</h2>
-        <GroupManager
-          :groups="groups"
-          @update-groups="updateGroups"
-        />
+        <GroupManager :groups="groups" @update-groups="updateGroups" />
       </section>
 
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm">
@@ -179,28 +175,17 @@ const importConfig = () => {
 
       <section class="bg-gray-50 rounded-lg p-3 shadow-sm lg:col-span-2">
         <h2 class="text-lg font-semibold text-gray-700 mt-0 mb-2">Result (Live Output)</h2>
-        <OutputPreview
-          :permissions="permissions"
-          :permask="permask"
-        />
+        <OutputPreview :permissions="permissions" />
       </section>
 
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Access Simulator</h2>
-        <AccessSimulator
-          :groups="groups"
-          :permissions="permissions"
-          :permask="permask"
-        />
+        <AccessSimulator :groups="groups" :permissions="permissions" :permask="permask" />
       </section>
 
       <section class="bg-gray-50 rounded-lg p-5 shadow-sm lg:col-span-2">
         <h2 class="text-xl font-semibold text-gray-700 mt-0 mb-4">Code Preview</h2>
-        <CodePreview
-          :groups="groups"
-          :permissions="permissions"
-          :permask="permask"
-        />
+        <CodePreview :groups="groups" :permissions="permissions" :permask="permask" />
       </section>
     </main>
   </div>

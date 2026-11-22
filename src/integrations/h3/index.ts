@@ -10,7 +10,10 @@ export { defaultPermaskH3Options } from "./options";
  * - As an `onRequest` handler in `defineEventHandler({ onRequest, handler })` (called with just `event`)
  * - As a small composition helper `(event, next)` when you want to wrap another handler manually
  */
-export type H3MiddlewareLike = (event: H3Event, next?: () => unknown | Promise<unknown>) => unknown | Promise<unknown>;
+export type H3MiddlewareLike = <Result = undefined>(
+  event: H3Event,
+  next?: () => Result | Promise<Result>
+) => Promise<Result | undefined>;
 
 /**
  * H3 helpers returned by {@link permaskH3}.

@@ -15,7 +15,7 @@ describe("permask itty-router integration", () => {
 
     const req = {
       user: { permissions: [createBitmask({ group: groups.POST, read: true })] }
-    } as unknown as IRequest;
+    } as IRequest;
 
     await expect(handler(req)).resolves.toBeUndefined();
   });
@@ -24,7 +24,7 @@ describe("permask itty-router integration", () => {
     const check = permaskIttyRouter(groups);
     const handler = check(groups.POST, PermissionAccess.READ);
 
-    const req = { user: { permissions: [] } } as unknown as IRequest;
+    const req = { user: { permissions: [] } } as IRequest;
     const res = (await handler(req)) as Response;
 
     expect(res.status).toBe(403);
@@ -44,5 +44,15 @@ describe("permask itty-router integration", () => {
 
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
+  });
+
+  it("propagates asynchronous failures from custom forbidden handlers", async () => {
+    const failure = new Error("Forbidden handler failure");
+    const check = permaskIttyRouter(groups, {
+      forbiddenResponse: () => Promise.reject(failure)
+    });
+    const request = { user: { permissions: [] } } as IRequest;
+
+    await expect(check(groups.POST, PermissionAccess.READ)(request)).rejects.toBe(failure);
   });
 });

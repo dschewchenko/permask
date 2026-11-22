@@ -39,10 +39,9 @@ export function createPermask<
   EnumOrObj extends EnumOrObjectType<Groups>,
   GroupNames extends StringKeysType<EnumOrObj> = StringKeysType<EnumOrObj>
 >(groups: Groups): PermaskInstance<GroupNames> {
-  const groupEntries = Object.entries(groups).filter(([, value]) => typeof value === "number") as [
-    GroupNames,
-    number
-  ][];
+  const groupEntries = Object.entries(groups).filter(([, value]) => typeof value === "number") as Array<
+    [GroupNames, number]
+  >;
 
   // fast and useful maps
   const groupMap = new Map(groupEntries);
@@ -90,13 +89,11 @@ export function createPermask<
     let groupId = groupMap.get(config.group as GroupNames);
 
     if (groupId === undefined) {
-      const numericGroupId = config.group as unknown as number;
-
-      if (!reverseGroupMap.has(numericGroupId)) {
+      if (typeof config.group !== "number" || !reverseGroupMap.has(config.group)) {
         throw new PermaskError("UNKNOWN_GROUP", `Unknown permission group: ${String(config.group)}`);
       }
 
-      groupId = numericGroupId;
+      groupId = config.group;
     }
 
     return createBitmask({ ...config, group: groupId });

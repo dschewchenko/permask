@@ -3,21 +3,26 @@ import { hasRequiredPermission } from "../../utils/bitmask";
 import {
   defaultPermaskNestjsOptions,
   type NestRequestLike,
+  type PermaskMetadataTarget,
   type PermaskNestjsOptions,
   type PermaskRequirement
 } from "./options";
 
-export type { NestRequestLike, PermaskNestjsOptions, PermaskRequirement } from "./options";
+export type { NestRequestLike, PermaskMetadataTarget, PermaskNestjsOptions, PermaskRequirement } from "./options";
 export { defaultPermaskNestjsOptions } from "./options";
 
 type ReflectWithMetadata = typeof Reflect & {
   defineMetadata?: (
-    metadataKey: unknown,
-    metadataValue: unknown,
-    target: unknown,
+    metadataKey: typeof PERMASK_NESTJS_METADATA_KEY,
+    metadataValue: Array<PermaskRequirement>,
+    target: PermaskMetadataTarget,
     propertyKey?: string | symbol
   ) => void;
-  getMetadata?: (metadataKey: unknown, target: unknown, propertyKey?: string | symbol) => unknown;
+  getMetadata?: (
+    metadataKey: typeof PERMASK_NESTJS_METADATA_KEY,
+    target: PermaskMetadataTarget,
+    propertyKey?: string | symbol
+  ) => Array<PermaskRequirement> | undefined;
 };
 
 /**
@@ -33,23 +38,25 @@ function assertReflectMetadata(reflect: ReflectWithMetadata) {
   }
 }
 
-function getRequirements(target: unknown): PermaskRequirement[] | undefined {
+function getRequirements(target: PermaskMetadataTarget): Array<PermaskRequirement> | undefined {
   const reflect = Reflect as ReflectWithMetadata;
   assertReflectMetadata(reflect);
-  return reflect.getMetadata(PERMASK_NESTJS_METADATA_KEY, target) as PermaskRequirement[] | undefined;
+  return reflect.getMetadata(PERMASK_NESTJS_METADATA_KEY, target);
 }
 
-function setRequirements(target: unknown, requirements: PermaskRequirement[]) {
+function setRequirements(target: PermaskMetadataTarget, requirements: Array<PermaskRequirement>) {
   const reflect = Reflect as ReflectWithMetadata;
   assertReflectMetadata(reflect);
   reflect.defineMetadata(PERMASK_NESTJS_METADATA_KEY, requirements, target);
 }
 
 function normalizeRequirements(
-  groupOrRequirements: number | PermaskRequirement[],
+  groupOrRequirements: number | Array<PermaskRequirement>,
   accessMask?: number
-): PermaskRequirement[] {
-  if (Array.isArray(groupOrRequirements)) return groupOrRequirements;
+): Array<PermaskRequirement> {
+  if (Array.isArray(groupOrRequirements)) {
+    return groupOrRequirements;
+  }
   return [{ group: groupOrRequirements, accessMask: accessMask ?? 0 }];
 }
 
@@ -86,14 +93,14 @@ function normalizeRequirements(
  * ```
  */
 export function Permask(group: number, accessMask: number): MethodDecorator & ClassDecorator;
-export function Permask(requirements: PermaskRequirement[]): MethodDecorator & ClassDecorator;
+export function Permask(requirements: Array<PermaskRequirement>): MethodDecorator & ClassDecorator;
 export function Permask(
-  groupOrRequirements: number | PermaskRequirement[],
+  groupOrRequirements: number | Array<PermaskRequirement>,
   accessMask?: number
 ): MethodDecorator & ClassDecorator {
   const requirements = normalizeRequirements(groupOrRequirements, accessMask);
 
-  return (target: object, _propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
+  return (target: PermaskMetadataTarget, _propertyKey?: string | symbol, descriptor?: PropertyDescriptor) => {
     const decoratedTarget = descriptor?.value ?? target;
     setRequirements(decoratedTarget, requirements);
   };
@@ -130,7 +137,9 @@ export function createPermaskNestjsGuard(opts?: PermaskNestjsOptions): new () =>
       const classRequirements = klass ? getRequirements(klass) : undefined;
       const requirements = handlerRequirements ?? classRequirements;
 
-      if (!requirements?.length) return true;
+      if (!requirements?.length) {
+        return true;
+      }
 
       const request = (context.switchToHttp().getRequest() ?? {}) as NestRequestLike;
       const bitmasks = await options.getPermissions(options, request);
@@ -157,7 +166,7 @@ export type PermaskNestjsDecorator<Groups extends Record<string, number | string
   /**
    * Attach multiple alternative requirements (any-of).
    */
-  (requirements: PermaskRequirement[]): MethodDecorator & ClassDecorator;
+  (requirements: Array<PermaskRequirement>): MethodDecorator & ClassDecorator;
 };
 
 /**
@@ -223,7 +232,10 @@ export function permaskNestjs<Groups extends Record<string, number | string>>(
   _groups: Groups,
   opts?: PermaskNestjsOptions
 ): PermaskNestjsIntegration<Groups> {
-  const PermaskTyped = ((groupOrRequirements: Groups[keyof Groups] | PermaskRequirement[], accessMask?: number) => {
+  const PermaskTyped = ((
+    groupOrRequirements: Groups[keyof Groups] | Array<PermaskRequirement>,
+    accessMask?: number
+  ) => {
     if (Array.isArray(groupOrRequirements)) {
       return Permask(groupOrRequirements);
     }

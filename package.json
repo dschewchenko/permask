@@ -26,14 +26,15 @@
     "test": "bunx --bun vitest",
     "test:coverage": "bunx --bun vitest run --coverage",
     "typecheck": "bun --bun tsc -p tsconfig.json --noEmit",
-    "lint": "bunx --bun biome check .",
-    "lint:fix": "bun run lint -- --write",
+    "lint": "oxlint --max-warnings=0 . && bun run format:check",
+    "lint:fix": "oxlint --fix . && bun run format",
+    "format": "oxfmt --write .",
+    "format:check": "oxfmt --check .",
     "prepare": "bunx --bun is-ci || bunx --bun husky",
     "husky:pre-commit": "bun run lint",
     "prepublishOnly": "bun run build"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.6.8",
     "@commitlint/cli": "^21.2.4",
     "@commitlint/config-conventional": "^21.2.4",
     "@nestjs/common": "^11.2.10",

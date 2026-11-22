@@ -19,7 +19,7 @@ describe("permask Hono integration", () => {
     const c = {
       get: (key: string) => store.get(key),
       json: vi.fn()
-    } as unknown as Context;
+    } as Context;
 
     const next = vi.fn().mockResolvedValue("ok");
 
@@ -35,7 +35,7 @@ describe("permask Hono integration", () => {
     const c = {
       get: (_key: string) => undefined,
       json: vi.fn((body: unknown, status: number) => new Response(JSON.stringify(body), { status }))
-    } as unknown as Context;
+    } as Context;
 
     const next = vi.fn();
     const res = (await middleware(c, next)) as Response;
@@ -56,12 +56,24 @@ describe("permask Hono integration", () => {
     const c = {
       get: vi.fn(),
       json: vi.fn((body: unknown, status: number) => new Response(JSON.stringify(body), { status }))
-    } as unknown as Context;
+    } as Context;
 
     const res = (await middleware(c, vi.fn())) as Response;
     const payload = await res.json();
 
     expect(res.status).toBe(500);
     expect(payload).toEqual({ error: "Internal server error" });
+  });
+
+  it("propagates asynchronous failures from downstream handlers", async () => {
+    const failure = new Error("Downstream failure");
+    const check = permaskHono(groups, {
+      getPermissions: () => [createBitmask({ group: groups.POST, read: true })]
+    });
+    const context = { json: vi.fn() } as Context;
+    const next = vi.fn().mockRejectedValue(failure);
+
+    await expect(check(groups.POST, PermissionAccess.READ)(context, next)).rejects.toBe(failure);
+    expect(context.json).not.toHaveBeenCalled();
   });
 });

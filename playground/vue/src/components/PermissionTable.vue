@@ -1,3 +1,4 @@
+import type { PermaskInstance } from "../types";
 <script setup lang="ts">
 import { ref, computed, watch } from "vue";
 import { PermissionAccess } from "../../../../src";
@@ -5,13 +6,13 @@ import { PermissionAccess } from "../../../../src";
 // Props
 const props = defineProps<{
   groups: Record<string, number>;
-  permissions: number[];
-  permask: any; // Permask instance
+  permissions: Array<number>;
+  permask: PermaskInstance;
 }>();
 
 // Emits
 const emit = defineEmits<{
-  (e: "update-permissions", permissions: number[]): void;
+  (e: "update-permissions", permissions: Array<number>): void;
   (e: "add-permission", groupKey: string, read: boolean, create: boolean, update: boolean, del: boolean): void;
 }>();
 
@@ -20,12 +21,12 @@ const permissionsMap = computed(() => {
   const map: Record<string, { read: boolean; create: boolean; update: boolean; delete: boolean }> = {};
 
   // Initialize with default values (all false) for each group
-  Object.keys(props.groups).forEach(groupKey => {
+  Object.keys(props.groups).forEach((groupKey) => {
     map[groupKey] = { read: false, create: false, update: false, delete: false };
   });
 
   // Update with actual values from permissions
-  props.permissions.forEach(bitmask => {
+  props.permissions.forEach((bitmask) => {
     const groupName = props.permask.getGroupName(bitmask);
     if (groupName) {
       const parsed = props.permask.parse(bitmask);
@@ -46,19 +47,17 @@ const updatePermission = (groupKey: string, permission: "read" | "create" | "upd
   const currentPerms = { ...permissionsMap.value[groupKey] };
   currentPerms[permission] = value;
 
-  emit("add-permission",
-    groupKey,
-    currentPerms.read,
-    currentPerms.create,
-    currentPerms.update,
-    currentPerms.delete
-  );
+  emit("add-permission", groupKey, currentPerms.read, currentPerms.create, currentPerms.update, currentPerms.delete);
 };
 
 // Reactively update when groups change
-watch(() => props.groups, () => {
-  // The computed permissionsMap will handle the updates
-}, { deep: true });
+watch(
+  () => props.groups,
+  () => {
+    // The computed permissionsMap will handle the updates
+  },
+  { deep: true }
+);
 </script>
 
 <template>
@@ -74,11 +73,7 @@ watch(() => props.groups, () => {
         </tr>
       </thead>
       <tbody>
-        <tr
-          v-for="(groupValue, groupKey) in groups"
-          :key="groupKey"
-          class="hover:bg-gray-50 border-b border-gray-200"
-        >
+        <tr v-for="(groupValue, groupKey) in groups" :key="groupKey" class="hover:bg-gray-50 border-b border-gray-200">
           <td class="p-3 font-medium">{{ groupKey }}</td>
           <td class="p-3 text-center">
             <input
@@ -118,5 +113,4 @@ watch(() => props.groups, () => {
   </div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

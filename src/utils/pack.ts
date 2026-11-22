@@ -4,7 +4,18 @@ import { base64ToUrlSafe, decodeBase64, encodeBase64, urlSafeToBase64 } from "./
 type BitDepth = 8 | 16 | 32;
 
 const prefixMap: Record<BitDepth, string> = { 8: "A", 16: "B", 32: "C" };
-const reversePrefixMap: Record<string, BitDepth> = { A: 8, B: 16, C: 32 };
+const depthForPrefix = (prefix: string | undefined): BitDepth | undefined => {
+  switch (prefix) {
+    case "A":
+      return 8;
+    case "B":
+      return 16;
+    case "C":
+      return 32;
+    default:
+      return undefined;
+  }
+};
 
 /**
  * Convert bitmasks to base64
@@ -21,12 +32,14 @@ const reversePrefixMap: Record<string, BitDepth> = { A: 8, B: 16, C: 32 };
  * const packed = packBitmasks(bitmasks);
  * console.log(packed); // "AAQIDBAU="
  */
-export function packBitmasks(bitmasks: number[], urlSafe = false): string {
-  if (!bitmasks?.length) return "";
+export function packBitmasks(bitmasks: Array<number>, urlSafe = false): string {
+  if (!bitmasks?.length) {
+    return "";
+  }
 
   try {
     const max = bitmasks.reduce((currentMax, bitmask) => Math.max(currentMax, bitmask >>> 0), 0);
-    const depth: BitDepth = max < 0x100 ? 8 : max < 0x10000 ? 16 : 32;
+    const depth: BitDepth = max < 0x1_00 ? 8 : max < 0x1_00_00 ? 16 : 32;
     const bytesPerElement = depth >> 3;
     const bytes = new Uint8Array(bitmasks.length * bytesPerElement);
 
@@ -53,10 +66,10 @@ export function packBitmasks(bitmasks: number[], urlSafe = false): string {
 
     const base64 = prefixMap[depth] + encodeBase64(bytes);
     return urlSafe ? base64ToUrlSafe(base64) : base64;
-  } catch (cause) {
-    throw cause instanceof PermaskError
-      ? cause
-      : new PermaskError("BASE64_UNAVAILABLE", "Failed to pack bitmasks.", { cause });
+  } catch (error) {
+    throw error instanceof PermaskError
+      ? error
+      : new PermaskError("BASE64_UNAVAILABLE", "Failed to pack bitmasks.", { cause: error });
   }
 }
 
@@ -74,18 +87,20 @@ export function packBitmasks(bitmasks: number[], urlSafe = false): string {
  * const bitmasks = unpackBitmasks(packed);
  * console.log(bitmasks); // [1, 2, 3, 4, 5]
  */
-export function unpackBitmasks(packed: string, urlSafe = false): number[] {
-  if (!packed) return [];
+export function unpackBitmasks(packed: string, urlSafe = false): Array<number> {
+  if (!packed) {
+    return [];
+  }
 
   try {
     const prefix = packed[0];
-    const depth = reversePrefixMap[prefix];
+    const depth = depthForPrefix(prefix);
 
     if (!depth) {
       throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: unknown prefix.");
     }
 
-    const base64String = urlSafe ? urlSafeToBase64(packed.substring(1)) : packed.substring(1);
+    const base64String = urlSafe ? urlSafeToBase64(packed.slice(1)) : packed.slice(1);
     const bytes = decodeBase64(base64String);
     const bytesPerElement = depth >> 3;
 
@@ -114,9 +129,9 @@ export function unpackBitmasks(packed: string, urlSafe = false): number[] {
     }
 
     return result;
-  } catch (cause) {
-    throw cause instanceof PermaskError
-      ? cause
-      : new PermaskError("INVALID_PACKED_STRING", "Failed to unpack bitmasks.", { cause });
+  } catch (error) {
+    throw error instanceof PermaskError
+      ? error
+      : new PermaskError("INVALID_PACKED_STRING", "Failed to unpack bitmasks.", { cause: error });
   }
 }

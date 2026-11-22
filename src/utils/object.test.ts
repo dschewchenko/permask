@@ -1,52 +1,63 @@
 import { describe, expect, it } from "vitest";
-import { get } from "./object";
+import { findPathValue, readPermissionBitmasks } from "./object";
 
 const testObject = {
   a: {
-    b: {
-      c: "value"
-    },
+    b: { c: "value" },
     d: null,
     e: 0
   }
 };
 
-describe("Object Utilities", () => {
-  describe("get", () => {
-    it("should return the value at a single level path", () => {
-      expect(get(testObject, "a")).toEqual(testObject.a);
-    });
+describe("Object path lookup", () => {
+  it("reads a single-level path", () => {
+    expect(findPathValue(testObject, "a")).toEqual({ found: true, value: testObject.a });
+  });
 
-    it("should return the value at a two-level path", () => {
-      expect(get(testObject, "a.b")).toEqual(testObject.a.b);
-    });
+  it("reads a two-level path", () => {
+    expect(findPathValue(testObject, "a.b")).toEqual({ found: true, value: testObject.a.b });
+  });
 
-    it("should return the value at a three-level path", () => {
-      expect(get(testObject, "a.b.c")).toBe("value");
-    });
+  it("reads a three-level path", () => {
+    expect(findPathValue(testObject, "a.b.c")).toEqual({ found: true, value: "value" });
+  });
 
-    it("should return undefined if the path does not exist", () => {
-      expect(get(testObject, "a.x")).toBeUndefined();
-    });
+  it("distinguishes missing paths", () => {
+    expect(findPathValue(testObject, "a.x")).toEqual({ found: false });
+  });
 
-    it("should return the default value if the path does not exist", () => {
-      expect(get(testObject, "a.x", "default")).toBe("default");
-    });
+  it("defaults to an empty bitmask array when the configured property is missing", () => {
+    expect(readPermissionBitmasks(testObject, "a.x")).toEqual([]);
+  });
 
-    it("should handle null values correctly", () => {
-      expect(get(testObject, "a.d")).toBeNull();
-    });
+  it("preserves an existing null value", () => {
+    expect(findPathValue(testObject, "a.d")).toEqual({ found: true, value: null });
+  });
 
-    it("should handle falsy values correctly", () => {
-      expect(get(testObject, "a.e")).toBe(0);
-    });
+  it("preserves an existing falsy value", () => {
+    expect(findPathValue(testObject, "a.e")).toEqual({ found: true, value: 0 });
+  });
 
-    it("should return the object itself if the path is empty", () => {
-      expect(get(testObject, "")).toEqual(testObject);
-    });
+  it("returns the object for an empty path", () => {
+    expect(findPathValue(testObject, "")).toEqual({ found: true, value: testObject });
+  });
 
-    it("should return the default value if the object is null or undefined", () => {
-      expect(get(null, "a", "default")).toBe("default");
-    });
+  it("distinguishes missing and null sources from existing properties", () => {
+    expect(findPathValue(null, "a")).toEqual({ found: false });
+    expect(findPathValue(undefined, "a")).toEqual({ found: false });
+  });
+
+  it("returns the configured bitmasks from inherited getters", () => {
+    class AuthenticatedRequest {
+      readonly masks = [1, 2];
+
+      get authentication() {
+        return { authorizations: this.masks };
+      }
+    }
+
+    const request = new AuthenticatedRequest();
+    expect(readPermissionBitmasks(request, "authentication.authorizations")).toBe(request.masks);
+    expect(readPermissionBitmasks(request, "authentication.missing")).toEqual([]);
   });
 });

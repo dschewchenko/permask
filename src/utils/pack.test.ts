@@ -8,39 +8,39 @@ const generateBitmasks = () => {
   bitmasks.add(0);
   bitmasks.add(1);
   bitmasks.add(0xff); // 8 bits
-  bitmasks.add(0xffff); // 16 bits
-  bitmasks.add(0xffffff); // 24 bits
-  bitmasks.add(0xffffffff); // 32 bits
+  bitmasks.add(0xff_ff); // 16 bits
+  bitmasks.add(0xff_ff_ff); // 24 bits
+  bitmasks.add(0xff_ff_ff_ff); // 32 bits
 
   for (let i = 0; i < 31; i++) {
     bitmasks.add(1 << i);
   }
 
-  bitmasks.add(0x12345678);
-  bitmasks.add(0x55555555);
-  bitmasks.add(0xaaaaaaaa);
-  bitmasks.add(0x33333333);
-  bitmasks.add(0xcccccccc);
+  bitmasks.add(0x12_34_56_78);
+  bitmasks.add(0x55_55_55_55);
+  bitmasks.add(0xaa_aa_aa_aa);
+  bitmasks.add(0x33_33_33_33);
+  bitmasks.add(0xcc_cc_cc_cc);
 
   return Array.from(bitmasks);
 };
 
 describe("Pack/Unpack Bitmasks", () => {
-  let bitmasks: number[];
+  let bitmasks: Array<number>;
   beforeAll(() => {
     bitmasks = generateBitmasks();
   });
 
   describe("packBitmasks", () => {
     it("should handle empty bitmasks array in packBitmasks", () => {
-      const empty: number[] = [];
+      const empty: Array<number> = [];
       const packed = packBitmasks(empty);
 
       expect(packed).toBe("");
     });
 
     it("should handle undefined bitmasks in packBitmasks", () => {
-      // @ts-expect-error
+      // @ts-expect-error Undefined is not an accepted bitmask input.
       const packed = packBitmasks(undefined);
 
       expect(packed).toBe("");
@@ -112,7 +112,7 @@ describe("Pack/Unpack Bitmasks", () => {
 
     it("should handle 16-bit depth (covers lines 14-17, 52)", () => {
       // Test 16-bit depth: max value >= 256 but < 65536
-      const bitmasks16bit = [0, 256, 1000, 65535];
+      const bitmasks16bit = [0, 256, 1000, 65_535];
       const packed = packBitmasks(bitmasks16bit);
       const unpacked = unpackBitmasks(packed);
 
@@ -122,7 +122,7 @@ describe("Pack/Unpack Bitmasks", () => {
 
     it("should handle 32-bit depth (covers lines 14-17, 52)", () => {
       // Test 32-bit depth: max value >= 65536
-      const bitmasks32bit = [0, 65536, 1000000, 0xffffffff];
+      const bitmasks32bit = [0, 65_536, 1_000_000, 0xff_ff_ff_ff];
       const packed = packBitmasks(bitmasks32bit);
       const unpacked = unpackBitmasks(packed);
 

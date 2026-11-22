@@ -14,7 +14,10 @@ export type PermaskHonoOptions<E extends Env = Env, P extends string = string, I
   /**
    * Callback to get permissions from the context.
    */
-  getPermissions?: (opts: Required<PermaskHonoOptions<E, P, I>>, c: Context<E, P, I>) => number[] | Promise<number[]>;
+  getPermissions?: (
+    opts: Required<PermaskHonoOptions<E, P, I>>,
+    c: Context<E, P, I>
+  ) => Array<number> | Promise<Array<number>>;
 
   /**
    * Callback to return a forbidden response.
@@ -29,6 +32,7 @@ export type PermaskHonoOptions<E extends Env = Env, P extends string = string, I
  */
 export const defaultPermaskHonoOptions: Required<PermaskHonoOptions> = {
   permissionsVariable: "permissions",
-  getPermissions: ({ permissionsVariable }, c) => (c.get(permissionsVariable as never) as number[] | undefined) ?? [],
+  getPermissions: ({ permissionsVariable }, c) =>
+    (c.get(permissionsVariable as never) as Array<number> | undefined) ?? [],
   forbiddenResponse: (c) => c.json({ error: "Access denied" }, 403)
 };

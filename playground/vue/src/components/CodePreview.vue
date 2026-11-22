@@ -1,3 +1,4 @@
+import type { PermaskInstance } from "../types";
 <script setup lang="ts">
 import { ref, computed, onUpdated, nextTick } from "vue";
 import hljs from "highlight.js/lib/core";
@@ -6,16 +7,15 @@ import typescript from "highlight.js/lib/languages/typescript";
 import json from "highlight.js/lib/languages/json";
 
 // Register languages
-hljs.registerLanguage('javascript', javascript);
-hljs.registerLanguage('typescript', typescript);
-hljs.registerLanguage('json', json);
+hljs.registerLanguage("javascript", javascript);
+hljs.registerLanguage("typescript", typescript);
+hljs.registerLanguage("json", json);
 
 // Props
 const props = defineProps<{
   groups: Record<string, number>;
-  permissions: number[];
-  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
-  permask: any; // Permask instance
+  permissions: Array<number>;
+  permask: PermaskInstance;
 }>();
 
 // Track which code view is active
@@ -28,7 +28,7 @@ const copyButtonText = ref("Copy");
 const jsonConfig = computed(() => {
   const config = {
     groups: props.groups,
-    permissions: props.permissions.map(bitmask => {
+    permissions: props.permissions.map((bitmask) => {
       const parsed = props.permask.parse(bitmask);
       const groupName = props.permask.getGroupName(bitmask);
       return {
@@ -58,10 +58,11 @@ const permask = createPermask(PermissionGroup);
 
 // Create permission bitmasks
 const permissions = [
-  ${props.permissions.map(bitmask => {
-    const parsed = props.permask.parse(bitmask);
-    const groupName = props.permask.getGroupName(bitmask);
-    return `// ${groupName} - ${parsed.read ? "Read" : ""}${parsed.create ? " Create" : ""}${parsed.update ? " Update" : ""}${parsed.delete ? " Delete" : ""}
+  ${props.permissions
+    .map((bitmask) => {
+      const parsed = props.permask.parse(bitmask);
+      const groupName = props.permask.getGroupName(bitmask);
+      return `// ${groupName} - ${parsed.read ? "Read" : ""}${parsed.create ? " Create" : ""}${parsed.update ? " Update" : ""}${parsed.delete ? " Delete" : ""}
   permask.create({
     group: "${groupName}",
     read: ${parsed.read},
@@ -69,7 +70,8 @@ const permissions = [
     update: ${parsed.update},
     delete: ${parsed.delete}
   })`;
-  }).join(",\n  ")}
+    })
+    .join(",\n  ")}
 ];
 
 // Example check
@@ -131,27 +133,26 @@ const copyToClipboard = (code: string) => {
 // Apply syntax highlighting after updates
 onUpdated(() => {
   nextTick(() => {
-    for (const block of document.querySelectorAll('pre code')) {
+    for (const block of document.querySelectorAll("pre code")) {
       const element = block as HTMLElement;
       // Clear previous highlighting and re-highlight
       if (element.dataset.highlighted) {
         delete element.dataset.highlighted;
-        element.className = element.className.replace(/hljs[^\s]*/g, '').trim();
+        element.className = element.className.replaceAll(/hljs[^\s]*/g, "").trim();
         element.className = element.className.replace(/language-\w+/, (match) => match);
       }
       // Use highlight with ignoreIllegals option to prevent security warnings
       try {
-        const content = element.textContent || '';
-        const language = element.className.match(/language-(\w+)/)?.[1] || 'typescript';
+        const content = element.textContent || "";
+        const language = element.className.match(/language-(\w+)/)?.[1] || "typescript";
         const result = hljs.highlight(content, {
           language,
           ignoreIllegals: true
         });
         element.innerHTML = result.value;
-        element.dataset.highlighted = 'yes';
-      } catch (error) {
+        element.dataset.highlighted = "yes";
+      } catch {
         // If highlighting fails, just skip it to avoid security issues
-        console.warn('Syntax highlighting failed:', error);
       }
     }
   });
@@ -162,24 +163,30 @@ onUpdated(() => {
   <div class="flex flex-col border border-gray-200 rounded-lg overflow-hidden bg-white">
     <div class="flex bg-gray-50 border-b border-gray-200">
       <button
-        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'json',
-                 'text-gray-600 hover:bg-gray-100': activeTab !== 'json' }"
+        :class="{
+          'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'json',
+          'text-gray-600 hover:bg-gray-100': activeTab !== 'json'
+        }"
         @click="activeTab = 'json'"
         class="px-4 py-2.5 text-sm font-medium"
       >
         JSON Config
       </button>
       <button
-        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'typescript',
-                 'text-gray-600 hover:bg-gray-100': activeTab !== 'typescript' }"
+        :class="{
+          'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'typescript',
+          'text-gray-600 hover:bg-gray-100': activeTab !== 'typescript'
+        }"
         @click="activeTab = 'typescript'"
         class="px-4 py-2.5 text-sm font-medium"
       >
         TypeScript
       </button>
       <button
-        :class="{ 'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'usage',
-                 'text-gray-600 hover:bg-gray-100': activeTab !== 'usage' }"
+        :class="{
+          'bg-white text-blue-600 font-semibold shadow-[inset_0_-2px_0] shadow-blue-600': activeTab === 'usage',
+          'text-gray-600 hover:bg-gray-100': activeTab !== 'usage'
+        }"
         @click="activeTab = 'usage'"
         class="px-4 py-2.5 text-sm font-medium"
       >
@@ -187,20 +194,29 @@ onUpdated(() => {
       </button>
       <button
         class="ml-auto px-4 py-2.5 text-sm font-medium text-blue-600 hover:bg-gray-100"
-        @click="copyToClipboard(
-          activeTab === 'json' ? jsonConfig :
-          activeTab === 'typescript' ? typeScriptCode :
-          usageExamples
-        )"
+        @click="
+          copyToClipboard(
+            activeTab === 'json' ? jsonConfig : activeTab === 'typescript' ? typeScriptCode : usageExamples
+          )
+        "
       >
         {{ copyButtonText }}
       </button>
     </div>
 
     <div class="p-4 overflow-x-auto min-h-[300px] max-h-[500px] overflow-y-auto">
-      <pre v-if="activeTab === 'json'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"><code class="language-json">{{ jsonConfig }}</code></pre>
-      <pre v-if="activeTab === 'typescript'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"><code class="language-typescript">{{ typeScriptCode }}</code></pre>
-      <pre v-if="activeTab === 'usage'" class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"><code class="language-javascript">{{ usageExamples }}</code></pre>
+      <pre
+        v-if="activeTab === 'json'"
+        class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"
+      ><code class="language-json">{{ jsonConfig }}</code></pre>
+      <pre
+        v-if="activeTab === 'typescript'"
+        class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"
+      ><code class="language-typescript">{{ typeScriptCode }}</code></pre>
+      <pre
+        v-if="activeTab === 'usage'"
+        class="m-0 whitespace-pre-wrap font-mono text-sm leading-6"
+      ><code class="language-javascript">{{ usageExamples }}</code></pre>
     </div>
   </div>
 </template>

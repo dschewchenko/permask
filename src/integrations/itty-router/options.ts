@@ -1,5 +1,5 @@
 import type { IRequest } from "itty-router";
-import { get } from "../../utils/object";
+import { readPermissionBitmasks } from "../../utils/object";
 
 /**
  * Options for `permaskIttyRouter(...)`.
@@ -15,9 +15,9 @@ export type PermaskIttyRouterOptions = {
   /**
    * Callback to get permissions from request.
    *
-   * @default ({ permissionsKey }, req) => get(req, permissionsKey, [])
+   * @default ({ permissionsKey }, req) => readPermissionBitmasks(req, permissionsKey)
    */
-  getPermissions?: (opts: Required<PermaskIttyRouterOptions>, req: IRequest) => number[] | Promise<number[]>;
+  getPermissions?: (opts: Required<PermaskIttyRouterOptions>, req: IRequest) => Array<number> | Promise<Array<number>>;
 
   /**
    * Callback to return a forbidden response.
@@ -33,7 +33,7 @@ export type PermaskIttyRouterOptions = {
 export const defaultPermaskIttyRouterOptions: Required<PermaskIttyRouterOptions> = {
   permissionsKey: "user.permissions",
   getPermissions: ({ permissionsKey }: Required<PermaskIttyRouterOptions>, req: IRequest) =>
-    get(req as unknown as Record<string, unknown>, permissionsKey, []) as number[],
+    readPermissionBitmasks(req, permissionsKey),
   forbiddenResponse: () =>
     new Response(JSON.stringify({ error: "Access denied" }), {
       status: 403,

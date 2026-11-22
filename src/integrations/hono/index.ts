@@ -54,17 +54,15 @@ export function permaskHono<
 
   return function checkPermissions(group: Groups[keyof Groups], accessMask: number): MiddlewareHandler<E, P, I> {
     return async (c, next) => {
+      let result: ReturnType<typeof next> | ReturnType<typeof options.forbiddenResponse>;
       try {
         const bitmasks = await options.getPermissions(options, c);
 
-        if (hasRequiredPermission(bitmasks, group as number, accessMask)) {
-          return next();
-        }
-
-        return options.forbiddenResponse(c);
+        result = hasRequiredPermission(bitmasks, group as number, accessMask) ? next() : options.forbiddenResponse(c);
       } catch {
         return c.json({ error: "Internal server error" }, 500);
       }
+      return result;
     };
   };
 }

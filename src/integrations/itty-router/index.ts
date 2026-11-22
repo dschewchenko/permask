@@ -47,6 +47,7 @@ export function permaskIttyRouter<Groups extends Record<string, number | string>
 
   return function checkPermissions(group: Groups[keyof Groups], accessMask: number): IttyRouterHandlerLike {
     return async (req) => {
+      let response: ReturnType<typeof options.forbiddenResponse>;
       try {
         const bitmasks = await options.getPermissions(options, req);
 
@@ -54,13 +55,14 @@ export function permaskIttyRouter<Groups extends Record<string, number | string>
           return;
         }
 
-        return options.forbiddenResponse(req);
-      } catch (_error) {
+        response = options.forbiddenResponse(req);
+      } catch {
         return new Response(JSON.stringify({ error: "Internal server error" }), {
           status: 500,
           headers: { "content-type": "application/json" }
         });
       }
+      return response;
     };
   };
 }

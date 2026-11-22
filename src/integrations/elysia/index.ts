@@ -55,7 +55,7 @@ export function permaskElysia<Groups extends Record<string, number | string>>(
         }
 
         return options.forbiddenResponse(ctx);
-      } catch (_error) {
+      } catch {
         return ctx.status(500);
       }
     };

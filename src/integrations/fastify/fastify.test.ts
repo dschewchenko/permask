@@ -15,12 +15,12 @@ describe("permask Fastify integration", () => {
 
     const request = {
       user: { permissions: [createBitmask({ group: groups.POST, read: true })] }
-    } as unknown as FastifyRequest;
+    } as FastifyRequest;
 
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as unknown as FastifyReply;
+    } as FastifyReply;
 
     await hook(request, reply);
 
@@ -32,11 +32,11 @@ describe("permask Fastify integration", () => {
     const check = permaskFastify(groups);
     const hook = check(groups.POST, PermissionAccess.READ);
 
-    const request = { user: { permissions: [] } } as unknown as FastifyRequest;
+    const request = { user: { permissions: [] } } as FastifyRequest;
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as unknown as FastifyReply;
+    } as FastifyReply;
 
     await hook(request, reply);
 
@@ -56,7 +56,7 @@ describe("permask Fastify integration", () => {
     const reply = {
       code: vi.fn().mockReturnThis(),
       send: vi.fn().mockReturnThis()
-    } as unknown as FastifyReply;
+    } as FastifyReply;
 
     await hook(request, reply);
 

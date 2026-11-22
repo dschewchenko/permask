@@ -1,5 +1,5 @@
 import type Koa from "koa";
-import { get } from "../../utils/object";
+import { readPermissionBitmasks } from "../../utils/object";
 
 /**
  * Options for `permaskKoa(...)`.
@@ -15,16 +15,16 @@ export type PermaskKoaOptions = {
   /**
    * Callback to get permissions from ctx.
    *
-   * @default ({ permissionsKey }, ctx) => get(ctx, permissionsKey, [])
+   * @default ({ permissionsKey }, ctx) => readPermissionBitmasks(ctx, permissionsKey)
    */
-  getPermissions?: (opts: Required<PermaskKoaOptions>, ctx: Koa.Context) => number[] | Promise<number[]>;
+  getPermissions?: (opts: Required<PermaskKoaOptions>, ctx: Koa.Context) => Array<number> | Promise<Array<number>>;
 
   /**
    * Callback to set forbidden response on ctx.
    *
    * @default (ctx) => { ctx.status = 403; ctx.body = { error: "Access denied" } }
    */
-  forbiddenResponse?: (ctx: Koa.Context) => unknown | Promise<unknown>;
+  forbiddenResponse?: (ctx: Koa.Context) => void;
 };
 
 /**
@@ -33,7 +33,7 @@ export type PermaskKoaOptions = {
 export const defaultPermaskKoaOptions: Required<PermaskKoaOptions> = {
   permissionsKey: "state.user.permissions",
   getPermissions: ({ permissionsKey }: Required<PermaskKoaOptions>, ctx: Koa.Context) =>
-    get(ctx as unknown as Record<string, unknown>, permissionsKey, []) as number[],
+    readPermissionBitmasks(ctx, permissionsKey),
   forbiddenResponse: (ctx: Koa.Context) => {
     ctx.status = 403;
     ctx.body = { error: "Access denied" };

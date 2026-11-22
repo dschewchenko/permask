@@ -127,20 +127,14 @@ export function canUpdate(bitmask: number): boolean {
  *
  * const canReadPosts = hasRequiredPermission(bitmasks, PermissionGroup.Post, PermissionAccess.READ);
  */
-export function hasRequiredPermission(bitmasks: number[], group: number, access: number) {
+export function hasRequiredPermission(bitmasks: Array<number>, group: number, access: number) {
   return bitmasks.some((bitmask) => hasPermissionGroup(bitmask, group) && hasPermissionAccess(bitmask, access));
 }
 
 /**
  * Return object with permission group and access from bitmask.
  */
-export function parseBitmask(bitmask: number): {
-  group: number;
-  read: boolean;
-  create: boolean;
-  delete: boolean;
-  update: boolean;
-} {
+export function parseBitmask(bitmask: number) {
   const group = getPermissionGroup(bitmask);
   const access = getPermissionAccess(bitmask);
   return {
@@ -169,10 +163,18 @@ export function createBitmask({
   update?: boolean;
 }) {
   let bitmask = 0;
-  if (read) bitmask = addPermissionAccess(bitmask, PermissionAccess.READ);
-  if (create) bitmask = addPermissionAccess(bitmask, PermissionAccess.CREATE);
-  if (del) bitmask = addPermissionAccess(bitmask, PermissionAccess.DELETE);
-  if (update) bitmask = addPermissionAccess(bitmask, PermissionAccess.UPDATE);
+  if (read) {
+    bitmask = addPermissionAccess(bitmask, PermissionAccess.READ);
+  }
+  if (create) {
+    bitmask = addPermissionAccess(bitmask, PermissionAccess.CREATE);
+  }
+  if (del) {
+    bitmask = addPermissionAccess(bitmask, PermissionAccess.DELETE);
+  }
+  if (update) {
+    bitmask = addPermissionAccess(bitmask, PermissionAccess.UPDATE);
+  }
   bitmask = setPermissionGroup(bitmask, group);
 
   return bitmask >>> 0;

@@ -15,7 +15,7 @@ describe("permask Koa integration", () => {
 
     const ctx = {
       state: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } }
-    } as unknown as Koa.Context;
+    } as Koa.Context;
 
     const next = vi.fn().mockResolvedValue("ok");
 
@@ -29,7 +29,7 @@ describe("permask Koa integration", () => {
 
     const ctx = {
       state: { user: { permissions: [] } }
-    } as unknown as Koa.Context;
+    } as Koa.Context;
 
     const next = vi.fn();
 
@@ -48,12 +48,24 @@ describe("permask Koa integration", () => {
     });
     const middleware = check(groups.POST, PermissionAccess.READ);
 
-    const ctx = { state: {} } as unknown as Koa.Context;
+    const ctx = { state: {} } as Koa.Context;
     const next = vi.fn();
 
     await middleware(ctx, next);
 
     expect(ctx.status).toBe(500);
     expect(ctx.body).toEqual({ error: "Internal server error" });
+  });
+
+  it("propagates asynchronous failures from downstream handlers", async () => {
+    const failure = new Error("Downstream failure");
+    const check = permaskKoa(groups, {
+      getPermissions: () => [createBitmask({ group: groups.POST, read: true })]
+    });
+    const context = { state: {} } as Koa.Context;
+    const next = vi.fn().mockRejectedValue(failure);
+
+    await expect(check(groups.POST, PermissionAccess.READ)(context, next)).rejects.toBe(failure);
+    expect(context.body).toBeUndefined();
   });
 });

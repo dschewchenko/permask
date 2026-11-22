@@ -25,11 +25,11 @@ const TestPermissionGroup = {
 } as const;
 
 // With 4-bit system: group bits shifted left by 4, not 3
-const bitmask0 = 0b00000; // 0 User, no access
-const bitmask1 = 0b10000 | 0b1111; // 31 = POST (1) << 4 | FULL ACCESS (15)
-const bitmask2 = 0b100000 | 0b0001; // 33 = COMMENT (2) << 4 | READ (1)
-const bitmask3 = 0b110000 | 0b1111; // 63 = LIKE (3) << 4 | FULL ACCESS (15)
-const bitmaskWithUpdate = 0b10000 | 0b0101; // 21 = POST (1) << 4 | READ+UPDATE (5)
+const bitmask0 = 0b0_0000; // 0 User, no access
+const bitmask1 = 0b1_0000 | 0b1111; // 31 = POST (1) << 4 | FULL ACCESS (15)
+const bitmask2 = 0b10_0000 | 0b0001; // 33 = COMMENT (2) << 4 | READ (1)
+const bitmask3 = 0b11_0000 | 0b1111; // 63 = LIKE (3) << 4 | FULL ACCESS (15)
+const bitmaskWithUpdate = 0b1_0000 | 0b0101; // 21 = POST (1) << 4 | READ+UPDATE (5)
 
 describe("Permission Bitmask Utilities", () => {
   describe("createBitmask", () => {
@@ -194,7 +194,7 @@ describe("Permission Bitmask Utilities", () => {
     });
 
     it("should handle empty bitmask array", () => {
-      const bitmasks: number[] = [];
+      const bitmasks: Array<number> = [];
       expect(hasRequiredPermission(bitmasks, TestPermissionGroup.POST, PermissionAccess.CREATE)).toBe(false);
       expect(hasRequiredPermission(bitmasks, TestPermissionGroup.POST, PermissionAccess.UPDATE)).toBe(false);
     });

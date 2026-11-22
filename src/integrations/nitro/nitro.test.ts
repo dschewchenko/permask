@@ -17,7 +17,7 @@ describe("permask Nitro integration", () => {
 
     const event = {
       context: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } }
-    } as unknown as H3Event;
+    } as H3Event;
 
     await expect(protectedHandler(event)).resolves.toBe("ok");
     expect(handler).toHaveBeenCalledWith(event);
@@ -31,7 +31,7 @@ describe("permask Nitro integration", () => {
 
     const event = {
       context: { user: { permissions: [] } }
-    } as unknown as H3Event;
+    } as H3Event;
 
     await expect(protectedHandler(event)).rejects.toMatchObject({ status: 403 });
     expect(handler).not.toHaveBeenCalled();

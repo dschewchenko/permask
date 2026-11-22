@@ -1,9 +1,9 @@
 import { PermaskError } from "../errors";
 
-export const base64ToUrlSafe = (base64: string) => base64.replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+export const base64ToUrlSafe = (base64: string) => base64.replaceAll("=", "").replaceAll("+", "-").replaceAll("/", "_");
 
 export const urlSafeToBase64 = (base64: string) => {
-  const normalized = base64.replace(/-/g, "+").replace(/_/g, "/");
+  const normalized = base64.replaceAll("-", "+").replaceAll("_", "/");
   const padLength = normalized.length % 4;
   return padLength === 0 ? normalized : normalized + "=".repeat(4 - padLength);
 };
@@ -17,7 +17,7 @@ export function encodeBase64(bytes: Uint8Array): string {
     throw new PermaskError("BASE64_UNAVAILABLE", "Missing base64 encoder (btoa/Buffer) in this runtime.");
   }
 
-  const chunkSize = 0x8000;
+  const chunkSize = 0x80_00;
   let binaryString = "";
 
   for (let offset = 0; offset < bytes.length; offset += chunkSize) {
@@ -40,14 +40,18 @@ export function decodeBase64(base64: string): Uint8Array {
       }
 
       return bytes;
-    } catch (cause) {
-      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: invalid base64 payload.", { cause });
+    } catch (error) {
+      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: invalid base64 payload.", {
+        cause: error
+      });
     }
   } else if (typeof Buffer !== "undefined") {
     try {
       return new Uint8Array(Buffer.from(base64, "base64"));
-    } catch (cause) {
-      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: invalid base64 payload.", { cause });
+    } catch (error) {
+      throw new PermaskError("INVALID_PACKED_STRING", "Invalid packed string: invalid base64 payload.", {
+        cause: error
+      });
     }
   }
 

@@ -18,8 +18,8 @@ bun install                 # install deps (uses bun.lock)
 bun run build               # build library bundles + types into dist/
 bun run test                # run vitest (watch/default mode)
 bun run test:coverage       # run tests + V8 coverage summary
-bun run lint                # biome check for formatting + lint
-bun run lint:fix            # apply biome fixes where safe
+bun run lint                # Oxlint rules and Oxfmt formatting
+bun run lint:fix            # apply safe lint fixes and format
 ```
 
 Playground (from repo root):
@@ -32,7 +32,7 @@ bun --cwd=playground/vue run build
 ## Coding Style & Naming Conventions
 
 - Language: TypeScript (ESM, `strict`).
-- Formatting/linting: **Biome** (`bunx biome check .`).
+- Formatting uses Oxfmt and linting uses Oxlint with the @nkzw preset.
 - Indentation: 2 spaces; line width: 120.
 - File naming: `kebab-case.ts` for modules; tests as `*.test.ts`.
 

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PermissionAccess } from "../../constants/permission";
 import { createBitmask } from "../../utils/bitmask";
 import { createPermaskNestjsGuard, PERMASK_NESTJS_METADATA_KEY, Permask, PermaskGuard, permaskNestjs } from "./";
+import type { PermaskMetadataTarget, PermaskRequirement } from "./options";
 
 const groups = {
   POST: 1,
@@ -10,8 +11,8 @@ const groups = {
 } as const;
 
 type ReflectMetadata = typeof Reflect & {
-  defineMetadata?: (metadataKey: unknown, metadataValue: unknown, target: object) => void;
-  getMetadata?: (metadataKey: unknown, target: object) => unknown;
+  defineMetadata?: (metadataKey: unknown, metadataValue: unknown, target: PermaskMetadataTarget) => void;
+  getMetadata?: (metadataKey: unknown, target: PermaskMetadataTarget) => Array<PermaskRequirement> | undefined;
 };
 
 function createExecutionContext(params: { handler?: unknown; klass?: unknown; request?: unknown }) {
@@ -21,7 +22,7 @@ function createExecutionContext(params: { handler?: unknown; klass?: unknown; re
     switchToHttp: () => ({
       getRequest: () => params.request
     })
-  } as unknown as ExecutionContext;
+  } as ExecutionContext;
 }
 
 describe("permask NestJS integration", () => {
@@ -97,7 +98,7 @@ describe("permask NestJS integration", () => {
     const context = createExecutionContext({ klass: PostsController, request });
 
     const Guard = createPermaskNestjsGuard({
-      getPermissions: (_opts, req) => (req.auth as { perms?: number[] } | undefined)?.perms ?? []
+      getPermissions: (_opts, req) => (req.auth as { perms?: Array<number> } | undefined)?.perms ?? []
     });
 
     const guard = new Guard();

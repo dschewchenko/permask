@@ -63,18 +63,17 @@ export function permaskKoa<Groups extends Record<string, number | string>>(
 
   return function checkPermissions(group: Groups[keyof Groups], accessMask: number): Koa.Middleware {
     return async (ctx, next) => {
+      let result: ReturnType<typeof next> | ReturnType<typeof options.forbiddenResponse>;
       try {
         const bitmasks = await options.getPermissions(options, ctx);
 
-        if (hasRequiredPermission(bitmasks, group as number, accessMask)) {
-          return next();
-        }
-
-        return options.forbiddenResponse(ctx);
+        result = hasRequiredPermission(bitmasks, group as number, accessMask) ? next() : options.forbiddenResponse(ctx);
       } catch {
         ctx.status = 500;
         ctx.body = { error: "Internal server error" };
+        return;
       }
+      return result;
     };
   };
 }

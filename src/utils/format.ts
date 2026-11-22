@@ -34,7 +34,7 @@ export function formatBitmask(
   let groupLabel = String(groupId);
 
   if (groups) {
-    const entries = Object.entries(groups).filter(([, value]) => typeof value === "number") as [string, number][];
+    const entries = Object.entries(groups).filter(([, value]) => typeof value === "number") as Array<[string, number]>;
     const reverseMap = new Map(entries.map(([key, value]) => [value, key]));
     const groupName = reverseMap.get(groupId);
 
@@ -44,7 +44,7 @@ export function formatBitmask(
   }
 
   const access = getPermissionAccess(bitmask);
-  const accessLabels = accessOrder.filter(([, flag]) => (access & flag) === flag).map(([name]) => name);
+  const accessLabels = accessOrder.flatMap(([name, flag]) => ((access & flag) === flag ? [name] : []));
   const accessLabel = accessLabels.length ? accessLabels.join(joinWith) : none;
 
   return `${groupLabel}${separator}${accessLabel}`;

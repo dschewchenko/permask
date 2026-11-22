@@ -26,6 +26,11 @@ jobs:
         with:
           bun-version: 1.4.5
 
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Use cache
         uses: actions/cache@v4
         with:

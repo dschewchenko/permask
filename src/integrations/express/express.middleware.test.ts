@@ -9,21 +9,21 @@ const groups = {
   COMMENTS: 2
 };
 
+const mockRequest = (permissions: Array<number>) =>
+  ({
+    user: { permissions }
+  }) as Request;
+
+const mockResponse = () => {
+  const res = {} as Response;
+  res.status = vi.fn().mockReturnValue(res);
+  res.json = vi.fn().mockReturnValue(res);
+  res.send = vi.fn().mockReturnValue(res);
+
+  return res;
+};
+
 describe("permask Express Middleware", () => {
-  const mockRequest = (permissions: number[]) =>
-    ({
-      user: { permissions }
-    }) as unknown as Request;
-
-  const mockResponse = () => {
-    const res = {} as Response;
-    res.status = vi.fn().mockReturnValue(res);
-    res.json = vi.fn().mockReturnValue(res);
-    res.send = vi.fn().mockReturnValue(res);
-
-    return res;
-  };
-
   const mockNext = vi.fn() as NextFunction;
 
   beforeEach(() => {

@@ -16,7 +16,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: { user: { permissions: [createBitmask({ group: groups.POST, read: true })] } },
       status: vi.fn()
-    } as unknown as PreContext;
+    } as PreContext;
 
     await beforeHandle(ctx);
 
@@ -30,7 +30,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: { user: { permissions: [] } },
       status: vi.fn().mockReturnValue("forbidden")
-    } as unknown as PreContext;
+    } as PreContext;
 
     const result = await beforeHandle(ctx);
 
@@ -49,7 +49,7 @@ describe("permask Elysia integration", () => {
     const ctx = {
       store: {},
       status: vi.fn().mockReturnValue("internal")
-    } as unknown as PreContext;
+    } as PreContext;
 
     const result = await beforeHandle(ctx);
 
