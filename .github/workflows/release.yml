@@ -46,8 +46,8 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
-      - name: Check
-        run: bun run check
+      - name: Lint, typecheck and build
+        run: bun run lint && bun run typecheck && bun run build
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
